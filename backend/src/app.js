@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import errorHandler from "./middlewares/error.middleware.js" ;
 
 const app = express() ;
 
@@ -11,8 +12,7 @@ app.use(express.urlencoded({extended:true})) ;
 app.use(cors()) ;
 app.use(cookieParser()) ;
 
-app.get("/" , (req, res)=>{
-    res.json("hellow world") ;
-})
+
+app.use(errorHandler) ;
 
 export default app ;
