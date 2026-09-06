@@ -1,5 +1,6 @@
 import Joi from "joi";
 
+// Validation schema for user registration
 export const registerSchema = Joi.object({
   firstName: Joi.string().trim().min(2).max(50).required().messages({
     "string.empty": "First name is required.",
@@ -39,4 +40,18 @@ export const registerSchema = Joi.object({
       "string.empty": "Role is required.",
     }),
 
+});
+
+// Validation schema for email verification
+export const verifyEmailSchema = Joi.object({
+  email: Joi.string().trim().lowercase().email().required().messages({
+    "string.empty": "Email is required.",
+    "string.email": "Enter a valid email address.",
+  }),
+
+  otp: Joi.string().trim().length(6).pattern(/^[0-9]+$/).required().messages({
+      "string.empty": "OTP is required.",
+      "string.length": "OTP must be exactly 6 digits.",
+      "string.pattern.base": "OTP must contain only numbers.",
+    }),
 });

@@ -2,11 +2,12 @@ import bcrypt from "bcrypt";
 import { User } from "../../models/User.model.js";
 import { OTP } from "../../models/OTP.model.js";
 import ApiError from "../../utils/ApiError.js";
-import { generateOTP, hashOTP, getOTPExpiry } from "../../utils/otp.util.js";
+import { generateOTP, hashOTP, getOTPExpiry , compareOTP } from "../../utils/otp.util.js";
 import { sendVerificationEmail } from "../../utils/email.util.js";
 
 const SALT_ROUNDS = 10;
 
+//  Registers a new user, generates an email verification OTP, and sends the OTP via email.
 export const registerUser = async ({
   firstName,
   lastName,
@@ -15,7 +16,7 @@ export const registerUser = async ({
   password,
   role,
 }) => {
-  // 1. Check for duplicate email or username
+  //  Check for duplicate email or username
   const existingUser = await User.findOne({ $or: [{ email }, { username }] });
   if (existingUser) {
     if (existingUser.email === email) {
@@ -24,10 +25,10 @@ export const registerUser = async ({
     throw new ApiError(409, "Username is already taken.");
   }
 
-  // 2. Hash the password (explicit — no model hook)
+  //  Hash the password (explicit — no model hook)
   const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
-  // 3. Create the user
+  //  Create the user
   const user = await User.create({
     firstName,
     lastName,
@@ -38,7 +39,7 @@ export const registerUser = async ({
     provider: "local",
   });
 
-  // 4. Generate OTP, save it, and email it — if ANY of this fails, roll back the user
+  //  Generate OTP, save it, and email it — if ANY of this fails, roll back the user
   try {
     const rawOTP = generateOTP();
     const hashedOTP = await hashOTP(rawOTP);
@@ -61,7 +62,7 @@ export const registerUser = async ({
     );
   }
 
-  // 5. Return safe user data (never return password)
+  //  Return safe user data (never return password)
   return {
     _id: user._id,
     firstName: user.firstName,
@@ -69,6 +70,56 @@ export const registerUser = async ({
     username: user.username,
     email: user.email,
     role: user.role,
+    isEmailVerified: user.isEmailVerified,
+  };
+};
+
+// Verifies a user's email using the provided OTP.
+export const verifyEmail = async ({ email, otp }) => {
+  //  Find the user
+  const user = await User.findOne({ email });
+  if (!user) {
+    throw new ApiError(404, "User account not found.");
+  }
+
+  //  Already verified , No need to proceed
+  if (user.isEmailVerified) {
+    throw new ApiError(400, "Email is already verified.");
+  }
+
+  //  Find the latest, unused email_verification OTP for this user
+  const otpDoc = await OTP.findOne({
+    user: user._id,
+    type: "email_verification",
+    isUsed: false,
+  }).sort({ createdAt: -1 });
+ 
+  if (!otpDoc) {
+    throw new ApiError(400, "Invalid or expired code.");
+  }
+
+  //  Check expiry
+  if (otpDoc.expiresAt < new Date()) {
+    throw new ApiError(400, "Invalid or expired code.");
+  }
+
+  //  Compare raw OTP against stored hash
+  const isMatch = await compareOTP(otp, otpDoc.otp);
+  if (!isMatch) {
+    throw new ApiError(400, "Invalid or expired code.");
+  }
+
+  //  Mark user as verified 
+  user.isEmailVerified = true;
+  await user.save();
+
+  //  Mark OTP as used
+  otpDoc.isUsed = true;
+  await otpDoc.save();
+
+  return {
+    _id: user._id,
+    email: user.email,
     isEmailVerified: user.isEmailVerified,
   };
 };
