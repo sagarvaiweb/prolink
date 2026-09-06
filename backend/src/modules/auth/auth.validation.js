@@ -55,3 +55,11 @@ export const verifyEmailSchema = Joi.object({
       "string.pattern.base": "OTP must contain only numbers.",
     }),
 });
+
+// Validation schema for resending email verification OTP
+export const resendVerificationSchema = Joi.object({
+  email: Joi.string().trim().lowercase().email().required().messages({
+    "string.empty": "Email is required.",
+    "string.email": "Enter a valid email address.",
+  }),
+});

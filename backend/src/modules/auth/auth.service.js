@@ -123,3 +123,42 @@ export const verifyEmail = async ({ email, otp }) => {
     isEmailVerified: user.isEmailVerified,
   };
 };
+
+// Resends a new email verification OTP to the user.
+export const resendVerification = async ({ email }) => {
+  //  Find the user
+  const user = await User.findOne({ email });
+  if (!user) {
+    throw new ApiError(404, "User account not found.");
+  }
+
+  //  Already verified? Nothing to resend
+  if (user.isEmailVerified) {
+    throw new ApiError(400, "Email is already verified.");
+  }
+
+  //  Invalidate any old, unused OTPs for this user/type
+  await OTP.updateMany(
+    { user: user._id, type: "email_verification", isUsed: false },
+    { isUsed: true }
+  );
+
+  //  Generate a fresh OTP, hash it, save it
+  const rawOTP = generateOTP();
+  const hashedOTP = await hashOTP(rawOTP);
+
+  await OTP.create({
+    user: user._id,
+    otp: hashedOTP,
+    type: "email_verification",
+    expiresAt: getOTPExpiry(),
+  });
+
+  //  Send the new OTP via email
+  await sendVerificationEmail(user.email, user.firstName, rawOTP);
+
+  return {
+    email: user.email,
+    message: "A new verification code has been sent to your email.",
+  };
+};

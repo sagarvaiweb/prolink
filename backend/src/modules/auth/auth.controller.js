@@ -18,3 +18,11 @@ export const verifyEmail = asyncHandler(async (req, res) => {
   return res.status(200).json(
     new ApiResponse(200, result, "Email verified successfully."));
 });
+
+// for resending email verification OTP
+export const resendVerification = asyncHandler(async (req, res) => {
+  const result = await authService.resendVerification(req.body);
+
+  return res.status(200).json(
+    new ApiResponse(200, result, "Verification code resent successfully."));
+});
