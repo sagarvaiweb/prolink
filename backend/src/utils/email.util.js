@@ -51,3 +51,25 @@ export const sendVerificationEmail = async (toEmail, firstName, otp) => {
     html,
   });
 };
+
+// Sends the OTP for password reset  
+export const sendPasswordResetEmail = async (toEmail, firstName, otp) => {
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 480px; margin: auto;">
+      <h2>Reset your ProLink password</h2>
+      <p>Hi ${firstName}, use the code below to reset your password. This code expires in 10 minutes.</p>
+      <div style="font-size: 28px; font-weight: bold; letter-spacing: 4px; background: #f4f4f4; padding: 16px; text-align: center; border-radius: 8px;">
+        ${otp}
+      </div>
+      <p style="color: #666; font-size: 13px; margin-top: 16px;">
+        If you didn't request a password reset, you can safely ignore this email.
+      </p>
+    </div>
+  `;
+
+  await sendEmail({
+    to: toEmail,
+    subject: "Reset your ProLink password",
+    html,
+  });
+};

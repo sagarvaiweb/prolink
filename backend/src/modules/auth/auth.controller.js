@@ -73,3 +73,24 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
   return res.status(200).json(
     new ApiResponse(200, { accessToken }, "Access token refreshed successfully."));
 });
+
+// for forgot password
+export const forgotPassword = asyncHandler(async (req, res) => {
+  const result = await authService.forgotPassword(req.body);
+  return res.status(200).json(
+    new ApiResponse(200, result, "Password reset code sent."));
+});
+
+// for reset password
+export const resetPassword = asyncHandler(async (req, res) => {
+  const result = await authService.resetPassword(req.body);
+  return res.status(200).json(
+    new ApiResponse(200, result, "Password reset successfully."));
+});    
+
+// for changing password
+export const changePassword = asyncHandler(async (req, res) => {
+  const result = await authService.changePassword(req.user._id, req.body);
+  return res.status(200).json(
+    new ApiResponse(200, result, "Password changed successfully."));
+});

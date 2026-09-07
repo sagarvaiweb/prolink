@@ -74,3 +74,51 @@ export const loginSchema = Joi.object({
     "string.empty": "Password is required.",
   }),
 });
+
+// Validation schema for forgot password
+export const forgotPasswordSchema = Joi.object({
+  email: Joi.string().trim().lowercase().email().required().messages({
+    "string.empty": "Email is required.",
+    "string.email": "Enter a valid email address.",
+  }),
+});
+
+// Validation schema for reset password
+export const resetPasswordSchema = Joi.object({
+  email: Joi.string().trim().lowercase().email().required().messages({
+    "string.empty": "Email is required.",
+    "string.email": "Enter a valid email address.",
+  }),
+  otp: Joi.string().trim().length(6).pattern(/^[0-9]+$/).required().messages({
+    "string.empty": "OTP is required.",
+    "string.length": "OTP must be exactly 6 digits.",
+    "string.pattern.base": "OTP must contain only numbers.",
+  }),
+  newPassword: Joi.string()
+    .min(8)
+    .pattern(new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&#^()_+\\-=]).{8,}$"))
+    .required()
+    .messages({
+      "string.empty": "New password is required.",
+      "string.min": "Password must be at least 8 characters.",
+      "string.pattern.base":
+        "Password must include an uppercase letter, lowercase letter, number, and special character.",
+    }),
+});
+
+// Validation schema for changing password
+export const changePasswordSchema = Joi.object({
+  oldPassword: Joi.string().required().messages({
+    "string.empty": "Current password is required.",
+  }),
+  newPassword: Joi.string()
+    .min(8)
+    .pattern(new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&#^()_+\\-=]).{8,}$"))
+    .required()
+    .messages({
+      "string.empty": "New password is required.",
+      "string.min": "Password must be at least 8 characters.",
+      "string.pattern.base":
+        "Password must include an uppercase letter, lowercase letter, number, and special character.",
+    }),
+});

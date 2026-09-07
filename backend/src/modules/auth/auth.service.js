@@ -4,7 +4,7 @@ import { User } from "../../models/User.model.js";
 import { OTP } from "../../models/OTP.model.js";
 import ApiError from "../../utils/ApiError.js";
 import { generateOTP, hashOTP, getOTPExpiry , compareOTP } from "../../utils/otp.util.js";
-import { sendVerificationEmail } from "../../utils/email.util.js";
+import { sendVerificationEmail , sendPasswordResetEmail } from "../../utils/email.util.js";
 import { generateAccessToken, generateRefreshToken } from "../../utils/token.util.js";
 
 const SALT_ROUNDS = 10;
@@ -262,4 +262,99 @@ export const refreshAccessToken = async (incomingRefreshToken) => {
   const newAccessToken = generateAccessToken(user);
 
   return { accessToken: newAccessToken };
+};
+
+// Sends a password-reset OTP to the user's email
+export const forgotPassword = async ({ email }) => {
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    throw new ApiError(404, "User account not found.");
+  }
+
+  //  Invalidate any old, unused forgot_password OTPs for this user
+  await OTP.updateMany(
+    { user: user._id, type: "forgot_password", isUsed: false },
+    { isUsed: true }
+  );
+
+  //  Generate a new OTP, hash it, save it
+  const rawOTP = generateOTP();
+  const hashedOTP = await hashOTP(rawOTP);
+
+  await OTP.create({
+    user: user._id,
+    otp: hashedOTP,
+    type: "forgot_password",
+    expiresAt: getOTPExpiry(),
+  });
+
+  //  Email the raw OTP to the user
+  await sendPasswordResetEmail(user.email, user.firstName, rawOTP);
+
+  return { email: user.email, message: "Password reset code sent to your email." };
+};
+
+// Verifies the OTP and sets a new password 
+export const resetPassword = async ({ email, otp, newPassword }) => {
+ 
+  const user = await User.findOne({ email });
+  if (!user) {
+    throw new ApiError(404, "User account not found.");
+  }
+
+  //  Find the latest, unused forgot_password OTP
+  const otpDoc = await OTP.findOne({
+    user: user._id,
+    type: "forgot_password",
+    isUsed: false,
+  }).sort({ createdAt: -1 });
+
+  if (!otpDoc) {
+    throw new ApiError(400, "Invalid or expired code.");
+  }
+
+  //  Check expiry
+  if (otpDoc.expiresAt < new Date()) {
+    throw new ApiError(400, "Invalid or expired code.");
+  }
+
+  //  Compare raw OTP against stored hash
+  const isMatch = await compareOTP(otp, otpDoc.otp);
+  if (!isMatch) {
+    throw new ApiError(400, "Invalid or expired code.");
+  }
+
+  //  Hash and set the new password
+  const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
+  user.password = hashedPassword;
+  user.lastPasswordChangedAt = new Date();
+  await user.save();
+
+  //  Mark OTP as used so it can't be reused
+  otpDoc.isUsed = true;
+  await otpDoc.save();
+
+  return { message: "Password reset successfully. Please log in." };
+};
+
+// Changes password for a LOGGED-IN user who knows their current password
+export const changePassword = async (userId, { oldPassword, newPassword }) => {
+ 
+  const user = await User.findById(userId).select("+password");
+  if (!user) {
+    throw new ApiError(404, "User account not found.");
+  }
+
+  const isMatch = await bcrypt.compare(oldPassword, user.password);
+  if (!isMatch) {
+    throw new ApiError(401, "Current password is incorrect.");
+  }
+
+  const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
+  user.password = hashedPassword;
+  user.lastPasswordChangedAt = new Date();
+  await user.save();
+
+  return { message: "Password changed successfully." };
 };
