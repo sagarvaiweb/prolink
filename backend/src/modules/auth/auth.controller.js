@@ -41,3 +41,26 @@ export const loginUser = asyncHandler(async (req, res) => {
   return res.status(200).cookie("refreshToken", refreshToken, cookieOptions).json(
         new ApiResponse(200, { user, accessToken }, "Login successful."));
 });
+
+// for getting current user
+export const getCurrentUser = asyncHandler(async (req, res) => {
+  const user = await authService.getCurrentUser(req.user._id);
+
+  return res.status(200).json(
+    new ApiResponse(200, user, "Current user fetched successfully."));
+});
+
+// for user logout
+export const logoutUser = asyncHandler(async (req, res) => {
+  await authService.logoutUser(req.user._id);
+
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  };
+
+  return res.status(200).clearCookie("refreshToken", cookieOptions).json(
+    new ApiResponse(200, {}, "Logged out successfully."));
+}); 
+

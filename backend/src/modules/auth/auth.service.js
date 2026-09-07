@@ -207,3 +207,31 @@ export const loginUser = async ({ email, password }) => {
     refreshToken,
   }; 
 };
+
+
+// Retrieves the current user's information based on their user ID
+export const getCurrentUser = async (userId) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(404, "User account not found.");
+  }
+
+  return {
+    _id: user._id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    username: user.username,
+    email: user.email,
+    role: user.role,
+    isEmailVerified: user.isEmailVerified,
+    avatar: user.avatar,
+  };
+};
+
+
+// Logs out a user by invalidating their refresh token
+export const logoutUser = async (userId) => {
+  await User.findByIdAndUpdate(userId, { $unset: { refreshToken: 1 } });
+  return { message: "Logged out successfully." };
+};
+
