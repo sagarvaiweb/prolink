@@ -64,3 +64,12 @@ export const logoutUser = asyncHandler(async (req, res) => {
     new ApiResponse(200, {}, "Logged out successfully."));
 }); 
 
+// for refreshing access token
+export const refreshAccessToken = asyncHandler(async (req, res) => {
+  const incomingRefreshToken = req.cookies?.refreshToken;
+
+  const { accessToken } = await authService.refreshAccessToken(incomingRefreshToken);
+
+  return res.status(200).json(
+    new ApiResponse(200, { accessToken }, "Access token refreshed successfully."));
+});

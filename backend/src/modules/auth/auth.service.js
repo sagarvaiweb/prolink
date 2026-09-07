@@ -1,4 +1,5 @@
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import { User } from "../../models/User.model.js";
 import { OTP } from "../../models/OTP.model.js";
 import ApiError from "../../utils/ApiError.js";
@@ -235,3 +236,30 @@ export const logoutUser = async (userId) => {
   return { message: "Logged out successfully." };
 };
 
+// Refreshes the access token using a valid refresh token
+export const refreshAccessToken = async (incomingRefreshToken) => {
+  if (!incomingRefreshToken) {
+    throw new ApiError(401, "Refresh token missing. Please log in again.");
+  }
+
+  let decoded;
+  try {
+    decoded = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
+  } catch (err) {
+    throw new ApiError(401, "Invalid or expired refresh token. Please log in again.");
+  }
+
+  const user = await User.findById(decoded._id).select("+refreshToken");
+  if (!user || !user.refreshToken) {
+    throw new ApiError(401, "Invalid refresh token. Please log in again.");
+  }
+
+  const isMatch = await bcrypt.compare(incomingRefreshToken, user.refreshToken);
+  if (!isMatch) {
+    throw new ApiError(401, "Invalid or expired refresh token. Please log in again.");
+  }
+
+  const newAccessToken = generateAccessToken(user);
+
+  return { accessToken: newAccessToken };
+};
