@@ -4,6 +4,7 @@ import { OTP } from "../../models/OTP.model.js";
 import ApiError from "../../utils/ApiError.js";
 import { generateOTP, hashOTP, getOTPExpiry , compareOTP } from "../../utils/otp.util.js";
 import { sendVerificationEmail } from "../../utils/email.util.js";
+import { generateAccessToken, generateRefreshToken } from "../../utils/token.util.js";
 
 const SALT_ROUNDS = 10;
 
@@ -161,4 +162,48 @@ export const resendVerification = async ({ email }) => {
     email: user.email,
     message: "A new verification code has been sent to your email.",
   };
+};
+
+
+// loginUser function to authenticate a user and generate access and refresh tokens
+export const loginUser = async ({ email, password }) => {
+
+  // Find user, explicitly include password (select: false by default)
+  const user = await User.findOne({ email }).select("+password");
+  if (!user) {
+    throw new ApiError(401, "Invalid email or password.");
+  }
+
+  // Check email verification
+  if (!user.isEmailVerified) {
+    throw new ApiError(403, "Please verify your email.");
+  }
+
+  //  Compare password
+  const isMatch = await bcrypt.compare(password, user.password);
+  if (!isMatch) {
+    throw new ApiError(401, "Invalid email or password.");
+  }
+
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user);
+
+  const hashedRefreshToken = await bcrypt.hash(refreshToken, SALT_ROUNDS);
+  user.refreshToken = hashedRefreshToken;
+  user.lastLogin = new Date();
+  await user.save();
+
+  return {
+    user: {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      isEmailVerified: user.isEmailVerified,
+    },
+    accessToken,
+    refreshToken,
+  }; 
 };

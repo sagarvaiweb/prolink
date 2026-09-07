@@ -26,3 +26,18 @@ export const resendVerification = asyncHandler(async (req, res) => {
   return res.status(200).json(
     new ApiResponse(200, result, "Verification code resent successfully."));
 });
+
+// for user login
+export const loginUser = asyncHandler(async (req, res) => {
+  const { user, accessToken, refreshToken } = await authService.loginUser(req.body);
+
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  };
+
+  return res.status(200).cookie("refreshToken", refreshToken, cookieOptions).json(
+        new ApiResponse(200, { user, accessToken }, "Login successful."));
+});

@@ -63,3 +63,14 @@ export const resendVerificationSchema = Joi.object({
     "string.email": "Enter a valid email address.",
   }),
 });
+
+// Validation schema for user login
+export const loginSchema = Joi.object({
+  email: Joi.string().trim().lowercase().email().required().messages({
+    "string.empty": "Email is required.",
+    "string.email": "Enter a valid email address.",
+  }),
+  password: Joi.string().required().messages({
+    "string.empty": "Password is required.",
+  }),
+});
