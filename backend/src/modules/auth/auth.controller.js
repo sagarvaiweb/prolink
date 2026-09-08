@@ -1,0 +1,96 @@
+import  asyncHandler  from "../../utils/asyncHandler.js";
+import ApiResponse from "../../utils/ApiResponse.js"; 
+import * as authService from "./auth.service.js";
+
+// for user registration
+export const registerUser = asyncHandler(async (req, res) => {
+  const newUser = await authService.registerUser(req.body);
+
+  return res.status(201).json(
+      new ApiResponse(201, newUser, "Registration successful. Please check your email for the verification code.")
+    );
+}); 
+
+// for email verification
+export const verifyEmail = asyncHandler(async (req, res) => {
+  const result = await authService.verifyEmail(req.body);
+
+  return res.status(200).json(
+    new ApiResponse(200, result, "Email verified successfully."));
+});
+
+// for resending email verification OTP
+export const resendVerification = asyncHandler(async (req, res) => {
+  const result = await authService.resendVerification(req.body);
+
+  return res.status(200).json(
+    new ApiResponse(200, result, "Verification code resent successfully."));
+});
+
+// for user login
+export const loginUser = asyncHandler(async (req, res) => {
+  const { user, accessToken, refreshToken } = await authService.loginUser(req.body);
+
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  };
+
+  return res.status(200).cookie("refreshToken", refreshToken, cookieOptions).json(
+        new ApiResponse(200, { user, accessToken }, "Login successful."));
+});
+
+// for getting current user
+export const getCurrentUser = asyncHandler(async (req, res) => {
+  const user = await authService.getCurrentUser(req.user._id);
+
+  return res.status(200).json(
+    new ApiResponse(200, user, "Current user fetched successfully."));
+});
+
+// for user logout
+export const logoutUser = asyncHandler(async (req, res) => {
+  await authService.logoutUser(req.user._id);
+
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+  };
+
+  return res.status(200).clearCookie("refreshToken", cookieOptions).json(
+    new ApiResponse(200, {}, "Logged out successfully."));
+}); 
+
+// for refreshing access token
+export const refreshAccessToken = asyncHandler(async (req, res) => {
+  const incomingRefreshToken = req.cookies?.refreshToken;
+
+  const { accessToken } = await authService.refreshAccessToken(incomingRefreshToken);
+
+  return res.status(200).json(
+    new ApiResponse(200, { accessToken }, "Access token refreshed successfully."));
+});
+
+// for forgot password
+export const forgotPassword = asyncHandler(async (req, res) => {
+  const result = await authService.forgotPassword(req.body);
+  return res.status(200).json(
+    new ApiResponse(200, result, "Password reset code sent."));
+});
+
+// for reset password
+export const resetPassword = asyncHandler(async (req, res) => {
+  const result = await authService.resetPassword(req.body);
+  return res.status(200).json(
+    new ApiResponse(200, result, "Password reset successfully."));
+});    
+
+// for changing password
+export const changePassword = asyncHandler(async (req, res) => {
+  const result = await authService.changePassword(req.user._id, req.body);
+  return res.status(200).json(
+    new ApiResponse(200, result, "Password changed successfully."));
+});

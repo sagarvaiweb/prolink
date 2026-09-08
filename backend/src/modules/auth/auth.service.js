@@ -1,0 +1,360 @@
+import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
+import { User } from "../../models/User.model.js";
+import { OTP } from "../../models/OTP.model.js";
+import ApiError from "../../utils/ApiError.js";
+import { generateOTP, hashOTP, getOTPExpiry , compareOTP } from "../../utils/otp.util.js";
+import { sendVerificationEmail , sendPasswordResetEmail } from "../../utils/email.util.js";
+import { generateAccessToken, generateRefreshToken } from "../../utils/token.util.js";
+
+const SALT_ROUNDS = 10;
+
+//  Registers a new user, generates an email verification OTP, and sends the OTP via email.
+export const registerUser = async ({
+  firstName,
+  lastName,
+  username,
+  email,
+  password,
+  role,
+}) => {
+  //  Check for duplicate email or username
+  const existingUser = await User.findOne({ $or: [{ email }, { username }] });
+  if (existingUser) {
+    if (existingUser.email === email) {
+      throw new ApiError(409, "Email is already registered.");
+    }
+    throw new ApiError(409, "Username is already taken.");
+  }
+
+  //  Hash the password (explicit — no model hook)
+  const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+
+  //  Create the user
+  const user = await User.create({
+    firstName,
+    lastName,
+    username,
+    email,
+    password: hashedPassword,
+    role,
+    provider: "local",
+  });
+
+  //  Generate OTP, save it, and email it — if ANY of this fails, roll back the user
+  try {
+    const rawOTP = generateOTP();
+    const hashedOTP = await hashOTP(rawOTP);
+
+    await OTP.create({
+      user: user._id,
+      otp: hashedOTP,
+      type: "email_verification",
+      expiresAt: getOTPExpiry(),
+    });
+
+    await sendVerificationEmail(user.email, user.firstName, rawOTP);
+  } catch (err) {
+    // Roll back: undo user creation so no broken/stuck account is left behind
+    await User.findByIdAndDelete(user._id);
+    await OTP.deleteMany({ user: user._id }); // clean up any OTP that did get created
+    throw new ApiError(
+      500,
+      "Failed to send verification email. Please try registering again."
+    );
+  }
+
+  //  Return safe user data (never return password)
+  return {
+    _id: user._id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    username: user.username,
+    email: user.email,
+    role: user.role,
+    isEmailVerified: user.isEmailVerified,
+  };
+};
+
+// Verifies a user's email using the provided OTP.
+export const verifyEmail = async ({ email, otp }) => {
+  //  Find the user
+  const user = await User.findOne({ email });
+  if (!user) {
+    throw new ApiError(404, "User account not found.");
+  }
+
+  //  Already verified , No need to proceed
+  if (user.isEmailVerified) {
+    throw new ApiError(400, "Email is already verified.");
+  }
+
+  //  Find the latest, unused email_verification OTP for this user
+  const otpDoc = await OTP.findOne({
+    user: user._id,
+    type: "email_verification",
+    isUsed: false,
+  }).sort({ createdAt: -1 });
+ 
+  if (!otpDoc) {
+    throw new ApiError(400, "Invalid or expired code.");
+  }
+
+  //  Check expiry
+  if (otpDoc.expiresAt < new Date()) {
+    throw new ApiError(400, "Invalid or expired code.");
+  }
+
+  //  Compare raw OTP against stored hash
+  const isMatch = await compareOTP(otp, otpDoc.otp);
+  if (!isMatch) {
+    throw new ApiError(400, "Invalid or expired code.");
+  }
+
+  //  Mark user as verified 
+  user.isEmailVerified = true;
+  await user.save();
+
+  //  Mark OTP as used
+  otpDoc.isUsed = true;
+  await otpDoc.save();
+
+  return {
+    _id: user._id,
+    email: user.email,
+    isEmailVerified: user.isEmailVerified,
+  };
+};
+
+// Resends a new email verification OTP to the user.
+export const resendVerification = async ({ email }) => {
+  //  Find the user
+  const user = await User.findOne({ email });
+  if (!user) {
+    throw new ApiError(404, "User account not found.");
+  }
+
+  //  Already verified? Nothing to resend
+  if (user.isEmailVerified) {
+    throw new ApiError(400, "Email is already verified.");
+  }
+
+  //  Invalidate any old, unused OTPs for this user/type
+  await OTP.updateMany(
+    { user: user._id, type: "email_verification", isUsed: false },
+    { isUsed: true }
+  );
+
+  //  Generate a fresh OTP, hash it, save it
+  const rawOTP = generateOTP();
+  const hashedOTP = await hashOTP(rawOTP);
+
+  await OTP.create({
+    user: user._id,
+    otp: hashedOTP,
+    type: "email_verification",
+    expiresAt: getOTPExpiry(),
+  });
+
+  //  Send the new OTP via email
+  await sendVerificationEmail(user.email, user.firstName, rawOTP);
+
+  return {
+    email: user.email,
+    message: "A new verification code has been sent to your email.",
+  };
+};
+
+
+// loginUser function to authenticate a user and generate access and refresh tokens
+export const loginUser = async ({ email, password }) => {
+
+  // Find user, explicitly include password (select: false by default)
+  const user = await User.findOne({ email }).select("+password");
+  if (!user) {
+    throw new ApiError(401, "Invalid email or password.");
+  }
+
+  // Check email verification
+  if (!user.isEmailVerified) {
+    throw new ApiError(403, "Please verify your email.");
+  }
+
+  //  Compare password
+  const isMatch = await bcrypt.compare(password, user.password);
+  if (!isMatch) {
+    throw new ApiError(401, "Invalid email or password.");
+  }
+
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user);
+
+  const hashedRefreshToken = await bcrypt.hash(refreshToken, SALT_ROUNDS);
+  user.refreshToken = hashedRefreshToken;
+  user.lastLogin = new Date();
+  await user.save();
+
+  return {
+    user: {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      isEmailVerified: user.isEmailVerified,
+    },
+    accessToken,
+    refreshToken,
+  }; 
+};
+
+
+// Retrieves the current user's information based on their user ID
+export const getCurrentUser = async (userId) => {
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(404, "User account not found.");
+  }
+
+  return {
+    _id: user._id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    username: user.username,
+    email: user.email,
+    role: user.role,
+    isEmailVerified: user.isEmailVerified,
+    avatar: user.avatar,
+  };
+};
+
+
+// Logs out a user by invalidating their refresh token
+export const logoutUser = async (userId) => {
+  await User.findByIdAndUpdate(userId, { $unset: { refreshToken: 1 } });
+  return { message: "Logged out successfully." };
+};
+
+// Refreshes the access token using a valid refresh token
+export const refreshAccessToken = async (incomingRefreshToken) => {
+  if (!incomingRefreshToken) {
+    throw new ApiError(401, "Refresh token missing. Please log in again.");
+  }
+
+  let decoded;
+  try {
+    decoded = jwt.verify(incomingRefreshToken, process.env.REFRESH_TOKEN_SECRET);
+  } catch (err) {
+    throw new ApiError(401, "Invalid or expired refresh token. Please log in again.");
+  }
+
+  const user = await User.findById(decoded._id).select("+refreshToken");
+  if (!user || !user.refreshToken) {
+    throw new ApiError(401, "Invalid refresh token. Please log in again.");
+  }
+
+  const isMatch = await bcrypt.compare(incomingRefreshToken, user.refreshToken);
+  if (!isMatch) {
+    throw new ApiError(401, "Invalid or expired refresh token. Please log in again.");
+  }
+
+  const newAccessToken = generateAccessToken(user);
+
+  return { accessToken: newAccessToken };
+};
+
+// Sends a password-reset OTP to the user's email
+export const forgotPassword = async ({ email }) => {
+
+  const user = await User.findOne({ email });
+  if (!user) {
+    throw new ApiError(404, "User account not found.");
+  }
+
+  //  Invalidate any old, unused forgot_password OTPs for this user
+  await OTP.updateMany(
+    { user: user._id, type: "forgot_password", isUsed: false },
+    { isUsed: true }
+  );
+
+  //  Generate a new OTP, hash it, save it
+  const rawOTP = generateOTP();
+  const hashedOTP = await hashOTP(rawOTP);
+
+  await OTP.create({
+    user: user._id,
+    otp: hashedOTP,
+    type: "forgot_password",
+    expiresAt: getOTPExpiry(),
+  });
+
+  //  Email the raw OTP to the user
+  await sendPasswordResetEmail(user.email, user.firstName, rawOTP);
+
+  return { email: user.email, message: "Password reset code sent to your email." };
+};
+
+// Verifies the OTP and sets a new password 
+export const resetPassword = async ({ email, otp, newPassword }) => {
+ 
+  const user = await User.findOne({ email });
+  if (!user) {
+    throw new ApiError(404, "User account not found.");
+  }
+
+  //  Find the latest, unused forgot_password OTP
+  const otpDoc = await OTP.findOne({
+    user: user._id,
+    type: "forgot_password",
+    isUsed: false,
+  }).sort({ createdAt: -1 });
+
+  if (!otpDoc) {
+    throw new ApiError(400, "Invalid or expired code.");
+  }
+
+  //  Check expiry
+  if (otpDoc.expiresAt < new Date()) {
+    throw new ApiError(400, "Invalid or expired code.");
+  }
+
+  //  Compare raw OTP against stored hash
+  const isMatch = await compareOTP(otp, otpDoc.otp);
+  if (!isMatch) {
+    throw new ApiError(400, "Invalid or expired code.");
+  }
+
+  //  Hash and set the new password
+  const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
+  user.password = hashedPassword;
+  user.lastPasswordChangedAt = new Date();
+  await user.save();
+
+  //  Mark OTP as used so it can't be reused
+  otpDoc.isUsed = true;
+  await otpDoc.save();
+
+  return { message: "Password reset successfully. Please log in." };
+};
+
+// Changes password for a LOGGED-IN user who knows their current password
+export const changePassword = async (userId, { oldPassword, newPassword }) => {
+ 
+  const user = await User.findById(userId).select("+password");
+  if (!user) {
+    throw new ApiError(404, "User account not found.");
+  }
+
+  const isMatch = await bcrypt.compare(oldPassword, user.password);
+  if (!isMatch) {
+    throw new ApiError(401, "Current password is incorrect.");
+  }
+
+  const hashedPassword = await bcrypt.hash(newPassword, SALT_ROUNDS);
+  user.password = hashedPassword;
+  user.lastPasswordChangedAt = new Date();
+  await user.save();
+
+  return { message: "Password changed successfully." };
+};
