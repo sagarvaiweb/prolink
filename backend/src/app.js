@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import errorHandler from "./middlewares/error.middleware.js";
 import authRoutes from "./modules/auth/auth.routes.js" ;
+import userRoutes from "./modules/user/user.routes.js" ;
 
 const app = express() ;
 
@@ -15,7 +16,8 @@ app.use(cookieParser()) ;
 
 
 // routes
-app.use("/api/auth", authRoutes);   
+app.use("/api/auth", authRoutes); 
+app.use("/api/users", userRoutes);  
 
 // error handler middleware i.e always remain at the last of all middlewares
 app.use(errorHandler) ;
