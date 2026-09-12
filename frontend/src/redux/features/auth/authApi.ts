@@ -118,10 +118,28 @@ export const authApi = createApi({
         method: "POST", 
         body }),
     }),
+
+    getCurrentUser: builder.query<ApiResponse<User>, void>({
+     queryFn: async (_arg, api, extraOptions) => {
+     const result = await baseQueryWithReauth("/auth/me", api, extraOptions);
+     return result as { data: ApiResponse<User> } | { error: FetchBaseQueryError };
+    },
+
+     async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
+     try {
+       const response = await queryFulfilled;
+       dispatch(setUser(response.data.data));
+     } catch {
+        // No action needed on failure; error handling is done in the component using setError
+     }
+  },
+
+  }),
+
     
   }),
 });
 
 
 export const { useRegisterMutation, useLoginMutation , useVerifyEmailMutation, useResendVerificationMutation ,
-  useForgotPasswordMutation, useResetPasswordMutation } = authApi;
+  useForgotPasswordMutation, useResetPasswordMutation , useGetCurrentUserQuery } = authApi;
