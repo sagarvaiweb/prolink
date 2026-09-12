@@ -8,6 +8,7 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { useRegisterMutation } from "@/redux/features/auth/authApi";
 import { RegisterPayload } from "@/types/auth.types";
+import { toast } from "sonner";
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -22,7 +23,6 @@ export default function RegisterForm() {
     role: "student",
   });
 
-  const [error, setError] = useState("");
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -32,13 +32,15 @@ export default function RegisterForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
+   
 
     try {
-      await register(formData).unwrap();
+      const res = await register(formData).unwrap();
       router.push(`/auth/verify-email?email=${encodeURIComponent(formData.email)}`);
+      toast.success(res?.message || "Registration successful. Please verify your email.");
+
     } catch (err: any) {
-      setError(err?.data?.message || "Something went wrong. Please try again.");
+      toast.error(err?.data?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -66,12 +68,7 @@ export default function RegisterForm() {
         Join thousands of professionals on ProLink.
       </p>
 
-      {/* Error Output Layout Component */}
-      {error && (
-        <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 font-medium">
-          {error}
-        </div>
-      )}
+      
 
       {/* Safe Form Interface Group */}
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full">
@@ -162,7 +159,7 @@ export default function RegisterForm() {
 
         {/* Action Button Container */}
         <div className="w-full pt-2">
-          <Button type="submit" isLoading={isLoading} className="w-full h-12 flex items-center justify-center bg-blue-800 hover:bg-blue-900 text-white font-semibold rounded-lg shadow transition-transform active:scale-[0.99]">
+          <Button type="submit" isLoading={isLoading} className="w-full h-12 cursor-pointer flex items-center justify-center bg-blue-800 hover:bg-blue-900 text-white font-semibold rounded-lg shadow transition-transform active:scale-[0.99]">
             Create account &rarr;
           </Button>
         </div>

@@ -8,6 +8,7 @@ import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { useLoginMutation } from "@/redux/features/auth/authApi";
 import { LoginPayload } from "@/types/auth.types";
+import { toast } from "sonner";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -17,7 +18,6 @@ export default function LoginForm() {
     email: "",
     password: "",
   });
-  const [error, setError] = useState("");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -25,14 +25,14 @@ export default function LoginForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
 
     try {
       const res = await login(formData).unwrap();
       router.push("/dashboard");
+      toast.success(res?.message || "Login successful. Redirecting to dashboard...");
 
     } catch (err: any) {
-      setError(err?.data?.message || "Something went wrong. Please try again.");
+      toast.error(err?.data?.message || "Something went wrong. Please try again.");
     }
   };
 
@@ -60,12 +60,7 @@ export default function LoginForm() {
         Sign in to pick up where you left off.
       </p>
 
-      {/* Error Output Panel */}
-      {error && (
-        <div className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 font-medium">
-          {error}
-        </div>
-      )}
+      
 
       {/* Form Grid Pipeline */}
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full">
@@ -99,14 +94,8 @@ export default function LoginForm() {
         </div>
 
         {/* Action Checkboxes & Anchor Links */}
-        <div className="flex items-center justify-between text-sm py-1 select-none">
-          <label className="flex items-center gap-2 text-gray-600 cursor-pointer">
-            <input 
-              type="checkbox" 
-              className="rounded border-gray-300 text-blue-800 focus:ring-blue-700 w-4 h-4 transition-colors cursor-pointer" 
-            />
-            <span className="text-sm font-medium text-gray-600">Remember me</span>
-          </label>
+        <div className="flex items-center justify-end text-sm py-1 select-none">
+          
           <Link 
             href="/auth/forgot-password" 
             className="text-blue-800 font-semibold hover:underline transition-all text-sm"
@@ -120,7 +109,7 @@ export default function LoginForm() {
           <Button 
             type="submit" 
             isLoading={isLoading} 
-            className="w-full h-12 flex items-center justify-center bg-blue-800 hover:bg-blue-900 text-white font-semibold rounded-lg shadow transition-transform active:scale-[0.99]">
+            className="w-full h-12 cursor-pointer flex items-center justify-center bg-blue-800 hover:bg-blue-900 text-white font-semibold rounded-lg shadow transition-transform active:scale-[0.99]">
             Sign in &rarr;
           </Button> 
         </div>
