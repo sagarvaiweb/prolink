@@ -2,7 +2,8 @@ import { createApi, fetchBaseQuery, FetchArgs, FetchBaseQueryError} from "@redux
 import type { BaseQueryFn } from "@reduxjs/toolkit/query";
 import type { RootState } from "@/redux/store";
 import { setCredentials, setAccessToken, setUser, clearCredentials } from "./authSlice";
-import {ApiResponse, User, LoginData, RegisterPayload, LoginPayload} from "@/types/auth.types";
+import {ApiResponse, User, LoginData, RegisterPayload, LoginPayload , ResendVerificationPayload , VerifyEmailPayload ,
+  ForgotPasswordPayload, ResetPasswordPayload} from "@/types/auth.types";
 
 // Plain base query , attaches token IF one exists, harmless when it doesn't
 const baseQuery = fetchBaseQuery({
@@ -85,8 +86,42 @@ export const authApi = createApi({
       },
     }),
 
+
+    verifyEmail: builder.mutation<ApiResponse<{ _id: string; email: string; isEmailVerified: boolean }>,VerifyEmailPayload>({
+      query: (body) => ({
+         url: "/auth/verify-email", 
+         method: "POST", 
+         body }),
+    }),
+
+
+    resendVerification: builder.mutation<ApiResponse<{ email: string; message: string }>,ResendVerificationPayload>({
+      query: (body) => ({ 
+        url: "/auth/resend-verification", 
+        method: "POST", 
+        body }),
+    }),
+
+
+   
+    forgotPassword: builder.mutation<ApiResponse<{ email: string; message: string }>, ForgotPasswordPayload>({
+      query: (body) => ({ 
+        url: "/auth/forgot-password", 
+        method: "POST", 
+        body }),
+    }),
+
+  
+    resetPassword: builder.mutation<ApiResponse<{ message: string }>, ResetPasswordPayload>({
+      query: (body) => ({ 
+        url: "/auth/reset-password", 
+        method: "POST", 
+        body }),
+    }),
     
   }),
 });
 
-export const { useRegisterMutation, useLoginMutation } = authApi;
+
+export const { useRegisterMutation, useLoginMutation , useVerifyEmailMutation, useResendVerificationMutation ,
+  useForgotPasswordMutation, useResetPasswordMutation } = authApi;
