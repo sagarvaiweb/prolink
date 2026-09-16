@@ -94,3 +94,24 @@ export const changePassword = asyncHandler(async (req, res) => {
   return res.status(200).json(
     new ApiResponse(200, result, "Password changed successfully."));
 });
+
+// for handling OAuth callback
+export const oauthCallback = asyncHandler(async (req, res) => {
+  // req.user was set by Passport's strategy callback (done(null, user))
+  const { accessToken, refreshToken } = await authService.handleOAuthLogin(req.user);
+
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    maxAge: Number(process.env.REFRESH_TOKEN_COOKIE_MAX_AGE),
+  };
+
+  res.cookie("refreshToken", refreshToken, cookieOptions);
+
+  // Redirect back to the frontend, passing the access token via URL.
+  // The frontend's callback page grabs it, stores it in Redux, then
+  // cleans the URL , accessToken never sits in browser history/bookmarks
+  // for long, and refreshToken is already safely in the httpOnly cookie.
+  res.redirect(`${process.env.FRONTEND_URL}/auth/oauth-callback?accessToken=${accessToken}`);
+});

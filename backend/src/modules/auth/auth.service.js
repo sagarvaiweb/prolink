@@ -1,8 +1,8 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { User } from "../../models/User.model.js";
-import { OTP } from "../../models/OTP.model.js";
-import ApiError from "../../utils/ApiError.js";
+import { OTP } from "../../models/OTP.model.js" ;
+import ApiError from "../../utils/ApiError.js" ;
 import { generateOTP, hashOTP, getOTPExpiry , compareOTP } from "../../utils/otp.util.js";
 import { sendVerificationEmail , sendPasswordResetEmail } from "../../utils/email.util.js";
 import { generateAccessToken, generateRefreshToken } from "../../utils/token.util.js";
@@ -357,4 +357,17 @@ export const changePassword = async (userId, { oldPassword, newPassword }) => {
   await user.save();
 
   return { message: "Password changed successfully." };
+};
+
+// Handles OAuth login by generating access and refresh tokens, hashing the refresh token, and saving it to the user's record.
+export const handleOAuthLogin = async (user) => {
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user);
+
+  const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+  user.refreshToken = hashedRefreshToken;
+  user.lastLogin = new Date();
+  await user.save();
+
+  return { accessToken, refreshToken };
 };

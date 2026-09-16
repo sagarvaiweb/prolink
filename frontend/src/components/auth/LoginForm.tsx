@@ -9,6 +9,7 @@ import Button from "@/components/ui/Button";
 import { useLoginMutation } from "@/redux/features/auth/authApi";
 import { LoginPayload } from "@/types/auth.types";
 import { toast } from "sonner";
+import OAuthButtons from "@/components/auth/OAuthButtons";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -60,7 +61,8 @@ export default function LoginForm() {
         Sign in to pick up where you left off.
       </p>
 
-      
+      {/* OAuth Buttons Component */}
+       <OAuthButtons /> 
 
       {/* Form Grid Pipeline */}
       <form onSubmit={handleSubmit} className="flex flex-col gap-4 w-full">

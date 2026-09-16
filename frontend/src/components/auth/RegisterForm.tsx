@@ -9,6 +9,7 @@ import Button from "@/components/ui/Button";
 import { useRegisterMutation } from "@/redux/features/auth/authApi";
 import { RegisterPayload } from "@/types/auth.types";
 import { toast } from "sonner";
+import OAuthButtons from "@/components/auth/OAuthButtons";
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -68,6 +69,8 @@ export default function RegisterForm() {
         Join thousands of professionals on ProLink.
       </p>
 
+       {/* OAuth Buttons Component */}
+      <OAuthButtons/>
       
 
       {/* Safe Form Interface Group */}
