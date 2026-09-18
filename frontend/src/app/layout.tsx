@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import ReduxProvider from "@/redux/provider";
+import { Toaster } from "sonner";
+import SessionProvider from "@/components/auth/SessionProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -11,7 +14,6 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
-
 
 export const metadata: Metadata = {
   title: "ProLink",
@@ -28,7 +30,18 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {/*  Everything inside here can now access the Redux store (useAppSelector, useAppDispatch) */}
+        <ReduxProvider>
+
+          {/*  Everything inside here can now access the current user session (useGetCurrentUserQuery) */}
+           <SessionProvider>{children}</SessionProvider>
+           
+          {/* Add the Toaster component here to display toast notifications */}
+           <Toaster position="top-center" richColors closeButton />
+
+        </ReduxProvider>
+      </body>
     </html>
   );
 }

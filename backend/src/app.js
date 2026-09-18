@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import passport from "./config/passport.js";
 import errorHandler from "./middlewares/error.middleware.js";
 import authRoutes from "./modules/auth/auth.routes.js" ;
 import userRoutes from "./modules/user/user.routes.js" ;
@@ -11,8 +12,13 @@ const app = express() ;
 
 app.use(express.json()) ;
 app.use(express.urlencoded({extended:true})) ;
-app.use(cors()) ;
+app.use( cors({
+    origin: process.env.FRONTEND_URL, // exact frontend origin
+    credentials: true, // allows cookies to be sent/received
+  })) ;
+
 app.use(cookieParser()) ;
+app.use(passport.initialize()); 
 
 
 // routes

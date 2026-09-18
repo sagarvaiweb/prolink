@@ -1,7 +1,2 @@
+/* 1. In Tailwind v4, this single directive replaces all old @tailwind rules */
 @import "tailwindcss";
-
-*{
-  margin:0 ;
-  padding:0 ;
-  box-sizing:border-box ;
-}
