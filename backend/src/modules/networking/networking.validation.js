@@ -8,3 +8,12 @@ export const sendConnectionRequestSchema = Joi.object({
     "string.length": "Invalid recipient ID format.",
   }),
 });
+
+// Validation schema for accepting a connection request
+export const acceptConnectionRequestSchema = Joi.object({
+  connectionId: Joi.string().trim().hex().length(24).required().messages({
+    "string.empty": "Connection request ID is required.",
+    "string.hex": "Invalid connection request ID format.",
+    "string.length": "Invalid connection request ID format.",
+  }),
+});
