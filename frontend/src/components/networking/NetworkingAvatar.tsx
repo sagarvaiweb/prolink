@@ -39,7 +39,8 @@ export default function NetworkingAvatar({
     // eslint-disable-next-line @next/next/no-img-element -- profile avatar URLs are supplied by the API and have no configured Next image host.
     <img
       src={avatar}
-      alt={`${firstName} ${lastName}`}
+      alt=""
+      aria-hidden="true"
       className={`${sizeClasses[size]} shrink-0 rounded-full border border-gray-100 object-cover`}
       onError={() => setHasImageError(true)}
     />
