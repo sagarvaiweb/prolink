@@ -109,3 +109,70 @@ export const getConnectionStatus = asyncHandler(async (req, res) => {
     new ApiResponse(200, result, "Connection status fetched successfully.")
   );
 });
+
+// Follows a target user from the authenticated user's account.
+export const followUser = asyncHandler(async (req, res) => {
+  const follow = await networkingService.followUser(req.user._id, req.params);
+
+  return res.status(201).json(
+    new ApiResponse(201, follow, "User followed successfully.")
+  );
+});
+
+// Removes the authenticated user's follow relationship with a target user.
+export const unfollowUser = asyncHandler(async (req, res) => {
+  const result = await networkingService.unfollowUser(req.user._id, req.params);
+
+  return res.status(200).json(
+    new ApiResponse(200, result, "User unfollowed successfully.")
+  );
+});
+
+// Lists users who follow the authenticated user.
+export const getFollowers = asyncHandler(async (req, res) => {
+  const result = await networkingService.getFollowers(req.user._id, req.query);
+
+  return res.status(200).json(
+    new ApiResponse(200, result, "Followers fetched successfully.")
+  );
+});
+
+// Lists users followed by the authenticated user.
+export const getFollowing = asyncHandler(async (req, res) => {
+  const result = await networkingService.getFollowing(req.user._id, req.query);
+
+  return res.status(200).json(
+    new ApiResponse(200, result, "Following fetched successfully.")
+  );
+});
+
+// Gets whether the authenticated user follows a target user.
+export const getFollowStatus = asyncHandler(async (req, res) => {
+  const result = await networkingService.getFollowStatus(req.user._id, req.params);
+
+  return res.status(200).json(
+    new ApiResponse(200, result, "Follow status fetched successfully.")
+  );
+});
+
+// Gets follower and following counts for a target user.
+export const getFollowCounts = asyncHandler(async (req, res) => {
+  const result = await networkingService.getFollowCounts(req.user._id, req.params);
+
+  return res.status(200).json(
+    new ApiResponse(200, result, "Follow counts fetched successfully.")
+  );
+});
+
+// Lists accepted connections shared with a target user.
+export const getMutualConnections = asyncHandler(async (req, res) => {
+  const result = await networkingService.getMutualConnections(
+    req.user._id,
+    req.params,
+    req.query
+  );
+
+  return res.status(200).json(
+    new ApiResponse(200, result, "Mutual connections fetched successfully.")
+  );
+});

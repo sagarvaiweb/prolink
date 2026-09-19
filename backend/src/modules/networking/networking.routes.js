@@ -4,18 +4,26 @@ import {
   cancelConnectionRequest,
   getConnectionStatus,
   getConnections,
+  getMutualConnections,
+  getFollowers,
+  getFollowing,
+  getFollowCounts,
+  getFollowStatus,
   getReceivedConnectionRequestCount,
   getReceivedConnectionRequests,
   getSentConnectionRequests,
   removeConnection,
   rejectConnectionRequest,
   sendConnectionRequest,
+  followUser,
+  unfollowUser,
 } from "./networking.controller.js";
 import authenticateUser from "../../middlewares/authenticateUser.middleware.js";
 import validateRequest from "../../middlewares/validate.middleware.js";
 import {
   acceptConnectionRequestSchema,
   connectionStatusSchema,
+  followUserSchema,
   getConnectionsSchema,
   sendConnectionRequestSchema,
 } from "./networking.validation.js";
@@ -54,6 +62,56 @@ router.get(
   authenticateUser,
   validateRequest(connectionStatusSchema, "params"),
   getConnectionStatus
+);
+
+router.get(
+  "/connections/mutual/:userId",
+  authenticateUser,
+  validateRequest(connectionStatusSchema, "params"),
+  validateRequest(getConnectionsSchema, "query"),
+  getMutualConnections
+);
+
+router.get(
+  "/followers",
+  authenticateUser,
+  validateRequest(getConnectionsSchema, "query"),
+  getFollowers
+);
+
+router.get(
+  "/following",
+  authenticateUser,
+  validateRequest(getConnectionsSchema, "query"),
+  getFollowing
+);
+
+router.get(
+  "/follow/count/:userId",
+  authenticateUser,
+  validateRequest(followUserSchema, "params"),
+  getFollowCounts
+);
+
+router.get(
+  "/follow/status/:userId",
+  authenticateUser,
+  validateRequest(followUserSchema, "params"),
+  getFollowStatus
+);
+
+router.post(
+  "/follow/:userId",
+  authenticateUser,
+  validateRequest(followUserSchema, "params"),
+  followUser
+);
+
+router.delete(
+  "/follow/:userId",
+  authenticateUser,
+  validateRequest(followUserSchema, "params"),
+  unfollowUser
 );
 
 router.post(

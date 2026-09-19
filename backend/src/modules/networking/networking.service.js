@@ -1,4 +1,5 @@
 import { Connection } from "../../models/Connection.model.js";
+import { Follow } from "../../models/Follow.model.js";
 import { User } from "../../models/User.model.js";
 import ApiError from "../../utils/ApiError.js";
 
@@ -306,5 +307,266 @@ export const getConnectionStatus = async (currentUserId, { userId }) => {
     status: connection.requester.equals(currentUserId)
       ? "pending_sent"
       : "pending_received",
+  };
+};
+
+const getActiveTargetUser = async (currentUserId, userId, selfErrorMessage) => {
+  if (currentUserId.toString() === userId) {
+    throw new ApiError(400, selfErrorMessage);
+  }
+
+  const targetUser = await User.findById(userId);
+  if (!targetUser || targetUser.accountStatus !== "active") {
+    throw new ApiError(404, "User account not found.");
+  }
+
+  return targetUser;
+};
+
+const getActiveFollowTarget = async (currentUserId, userId) => {
+  return getActiveTargetUser(currentUserId, userId, "You cannot follow yourself.");
+};
+
+// Creates a directional follow relationship for the authenticated user.
+export const followUser = async (currentUserId, { userId }) => {
+  const targetUser = await getActiveFollowTarget(currentUserId, userId);
+
+  const existingFollow = await Follow.findOne({
+    follower: currentUserId,
+    following: targetUser._id,
+  });
+
+  if (existingFollow) {
+    throw new ApiError(409, "You are already following this user.");
+  }
+
+  try {
+    const follow = await Follow.create({
+      follower: currentUserId,
+      following: targetUser._id,
+    });
+
+    return {
+      _id: follow._id,
+      follower: follow.follower,
+      following: follow.following,
+      createdAt: follow.createdAt,
+      updatedAt: follow.updatedAt,
+    };
+  } catch (error) {
+    if (error?.code === 11000) {
+      throw new ApiError(409, "You are already following this user.");
+    }
+
+    throw error;
+  }
+};
+
+// Removes the authenticated user's directional follow relationship.
+export const unfollowUser = async (currentUserId, { userId }) => {
+  const targetUser = await getActiveFollowTarget(currentUserId, userId);
+
+  const follow = await Follow.findOneAndDelete({
+    follower: currentUserId,
+    following: targetUser._id,
+  });
+
+  if (!follow) {
+    throw new ApiError(404, "Follow relationship not found.");
+  }
+
+  return { _id: follow._id };
+};
+
+const getFollowUsers = async (
+  userId,
+  { page = 1, limit = 10 },
+  { userField, profileField }
+) => {
+  const { currentPage, pageSize, skip } = getPaginationValues({ page, limit });
+  const followFilter = { [userField]: userId };
+
+  const followsQuery = Follow.find(followFilter)
+    .populate(profileField, SAFE_USER_PROFILE_FIELDS)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(pageSize);
+
+  const [follows, totalUsers] = await Promise.all([
+    followsQuery,
+    Follow.countDocuments(followFilter),
+  ]);
+
+  return {
+    users: follows.map((follow) => safeProfile(follow[profileField])),
+    pagination: {
+      currentPage,
+      limit: pageSize,
+      totalUsers,
+      totalPages: Math.ceil(totalUsers / pageSize),
+    },
+  };
+};
+
+// Lists users who follow the authenticated user.
+export const getFollowers = async (userId, pagination = {}) => {
+  return getFollowUsers(userId, pagination, {
+    userField: "following",
+    profileField: "follower",
+  });
+};
+
+// Lists users followed by the authenticated user.
+export const getFollowing = async (userId, pagination = {}) => {
+  return getFollowUsers(userId, pagination, {
+    userField: "follower",
+    profileField: "following",
+  });
+};
+
+// Gets whether the authenticated user follows a target user.
+export const getFollowStatus = async (currentUserId, { userId }) => {
+  const targetUser = await getActiveTargetUser(
+    currentUserId,
+    userId,
+    "You cannot check follow status with yourself."
+  );
+
+  const follow = await Follow.exists({
+    follower: currentUserId,
+    following: targetUser._id,
+  });
+
+  return { isFollowing: Boolean(follow) };
+};
+
+// Gets follower and following counts for an active target user.
+export const getFollowCounts = async (currentUserId, { userId }) => {
+  const targetUser = await getActiveTargetUser(
+    currentUserId,
+    userId,
+    "You cannot check follow counts with yourself."
+  );
+
+  const [followersCount, followingCount] = await Promise.all([
+    Follow.countDocuments({ following: targetUser._id }),
+    Follow.countDocuments({ follower: targetUser._id }),
+  ]);
+
+  return { followersCount, followingCount };
+};
+
+const getMutualConnectionsPipeline = (currentUserId, targetUserId) => [
+  {
+    $match: {
+      status: "accepted",
+      $or: [{ requester: currentUserId }, { recipient: currentUserId }],
+    },
+  },
+  {
+    $project: {
+      connectedUser: {
+        $cond: [
+          { $eq: ["$requester", currentUserId] },
+          "$recipient",
+          "$requester",
+        ],
+      },
+    },
+  },
+  {
+    $match: {
+      connectedUser: { $nin: [currentUserId, targetUserId] },
+    },
+  },
+  {
+    $lookup: {
+      from: Connection.collection.name,
+      let: { candidateUserId: "$connectedUser" },
+      pipeline: [
+        {
+          $match: {
+            status: "accepted",
+            $expr: {
+              $or: [
+                {
+                  $and: [
+                    { $eq: ["$requester", "$$candidateUserId"] },
+                    { $eq: ["$recipient", targetUserId] },
+                  ],
+                },
+                {
+                  $and: [
+                    { $eq: ["$requester", targetUserId] },
+                    { $eq: ["$recipient", "$$candidateUserId"] },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      ],
+      as: "targetConnections",
+    },
+  },
+  { $match: { "targetConnections.0": { $exists: true } } },
+  { $group: { _id: "$connectedUser" } },
+  {
+    $lookup: {
+      from: User.collection.name,
+      localField: "_id",
+      foreignField: "_id",
+      as: "user",
+    },
+  },
+  { $unwind: "$user" },
+  {
+    $project: {
+      _id: 0,
+      user: {
+        _id: "$user._id",
+        firstName: "$user.firstName",
+        lastName: "$user.lastName",
+        username: "$user.username",
+        role: "$user.role",
+        avatar: "$user.avatar",
+      },
+    },
+  },
+];
+
+// Lists accepted connections shared by the authenticated user and a target user.
+export const getMutualConnections = async (
+  currentUserId,
+  { userId },
+  { page = 1, limit = 10 }
+) => {
+  const targetUser = await getActiveTargetUser(
+    currentUserId,
+    userId,
+    "You cannot check mutual connections with yourself."
+  );
+  const { currentPage, pageSize, skip } = getPaginationValues({ page, limit });
+  const pipeline = getMutualConnectionsPipeline(currentUserId, targetUser._id);
+
+  const [mutualConnections, totals] = await Promise.all([
+    Connection.aggregate([
+      ...pipeline,
+      { $sort: { "user.firstName": 1, "user.lastName": 1, "user._id": 1 } },
+      { $skip: skip },
+      { $limit: pageSize },
+    ]),
+    Connection.aggregate([...pipeline, { $count: "totalUsers" }]),
+  ]);
+
+  const totalUsers = totals[0]?.totalUsers ?? 0;
+  return {
+    users: mutualConnections.map((connection) => connection.user),
+    pagination: {
+      currentPage,
+      limit: pageSize,
+      totalUsers,
+      totalPages: Math.ceil(totalUsers / pageSize),
+    },
   };
 };

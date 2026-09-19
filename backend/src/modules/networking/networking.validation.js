@@ -41,3 +41,12 @@ export const connectionStatusSchema = Joi.object({
     "string.length": "Invalid user ID format.",
   }),
 });
+
+// Validation schema for following or unfollowing a user.
+export const followUserSchema = Joi.object({
+  userId: Joi.string().trim().hex().length(24).required().messages({
+    "string.empty": "User ID is required.",
+    "string.hex": "Invalid user ID format.",
+    "string.length": "Invalid user ID format.",
+  }),
+});
