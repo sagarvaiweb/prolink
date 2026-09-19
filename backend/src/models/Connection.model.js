@@ -30,4 +30,14 @@ const connectionSchema = new Schema(
 connectionSchema.index({ requester: 1, status: 1, createdAt: -1 });
 connectionSchema.index({ recipient: 1, status: 1, createdAt: -1 });
 
+// Prevents concurrent duplicate requests in the same direction while allowing
+// a new request after a prior request was rejected or cancelled.
+connectionSchema.index(
+  { requester: 1, recipient: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { status: { $in: ["pending", "accepted"] } },
+  }
+);
+
 export const Connection = mongoose.model("Connection", connectionSchema);

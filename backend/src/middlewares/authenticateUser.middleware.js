@@ -24,6 +24,10 @@ const authenticateUser = asyncHandler(async (req, res, next) => {
     throw new ApiError(401, "User account not found.");
   }
 
+  if (user.accountStatus !== "active") {
+    throw new ApiError(403, "Your account is not active.");
+  }
+
   req.user = user; // attach user to the request for downstream handlers
   next();
 });

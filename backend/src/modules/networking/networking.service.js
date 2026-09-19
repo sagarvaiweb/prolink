@@ -47,11 +47,20 @@ export const sendConnectionRequest = async (senderId, { recipient }) => {
     throw new ApiError(409, "A connection request already exists.");
   }
 
-  const connection = await Connection.create({
-    requester: sender._id,
-    recipient: recipientUser._id,
-    status: "pending",
-  });
+  let connection;
+  try {
+    connection = await Connection.create({
+      requester: sender._id,
+      recipient: recipientUser._id,
+      status: "pending",
+    });
+  } catch (error) {
+    if (error?.code === 11000) {
+      throw new ApiError(409, "A connection request already exists.");
+    }
+
+    throw error;
+  }
 
   await createConnectionNotification({
     recipient: recipientUser._id,
@@ -90,9 +99,16 @@ const respondToConnectionRequest = async (
     throw new ApiError(400, `Only pending connection requests can be ${status}.`);
   }
 
-  connection.status = status;
-  connection.respondedAt = new Date();
-  await connection.save();
+  const respondedAt = new Date();
+  const updatedConnection = await Connection.findOneAndUpdate(
+    { _id: connectionId, [authorizedField]: userId, status: "pending" },
+    { $set: { status, respondedAt } },
+    { new: true }
+  );
+
+  if (!updatedConnection) {
+    throw new ApiError(400, `Only pending connection requests can be ${status}.`);
+  }
 
   const notificationType = {
     accepted: NOTIFICATION_TYPES.CONNECTION_REQUEST_ACCEPTED,
@@ -101,21 +117,21 @@ const respondToConnectionRequest = async (
 
   if (notificationType) {
     await createConnectionNotification({
-      recipient: connection.requester,
+      recipient: updatedConnection.requester,
       actor: userId,
       type: notificationType,
-      connection: connection._id,
+      connection: updatedConnection._id,
     });
   }
 
   return {
-    _id: connection._id,
-    requester: connection.requester,
-    recipient: connection.recipient,
-    status: connection.status,
-    respondedAt: connection.respondedAt,
-    createdAt: connection.createdAt,
-    updatedAt: connection.updatedAt,
+    _id: updatedConnection._id,
+    requester: updatedConnection.requester,
+    recipient: updatedConnection.recipient,
+    status: updatedConnection.status,
+    respondedAt: updatedConnection.respondedAt,
+    createdAt: updatedConnection.createdAt,
+    updatedAt: updatedConnection.updatedAt,
   };
 };
 
@@ -309,7 +325,7 @@ export const getConnectionStatus = async (currentUserId, { userId }) => {
   }
 
   const targetUser = await User.findById(userId);
-  if (!targetUser) {
+  if (!targetUser || targetUser.accountStatus !== "active") {
     throw new ApiError(404, "User account not found.");
   }
 
