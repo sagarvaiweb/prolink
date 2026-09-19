@@ -134,3 +134,58 @@ export const addEducation = async (userId, educationData) => {
   return profile;
 };
 
+// update an existing education entry in the profile of the currently authenticated user
+export const updateEducation = async (userId, educationId, updates) => {
+  const profile = await findOrCreateProfile(userId);
+
+  const edu = profile.education.id(educationId);
+  if (!edu) {
+    throw new ApiError(404, "Education entry not found.");
+  }
+
+  Object.assign(edu, updates);
+  await profile.save();
+
+  return profile;
+};
+
+// delete an education entry from the profile of the currently authenticated user
+export const deleteEducation = async (userId, educationId) => {
+  const profile = await findOrCreateProfile(userId);
+
+  const edu = profile.education.id(educationId);
+  if (!edu) {
+    throw new ApiError(404, "Education entry not found.");
+  }
+
+  edu.deleteOne();
+  profile.profileCompletion = calculateCompletion(profile);
+  await profile.save();
+
+  return profile;
+};
+
+// upload a new profile photo (avatar) for the currently authenticated user
+export const uploadProfilePhoto = async (userId, fileUrl) => {
+  const user = await User.findByIdAndUpdate(userId, { avatar: fileUrl }, { new: true });
+  if (!user) throw new ApiError(404, "User account not found.");
+  return { avatar: user.avatar };
+};
+
+// upload a new cover photo for the currently authenticated user
+export const uploadCoverPhoto = async (userId, fileUrl) => {
+  const profile = await findOrCreateProfile(userId);
+  profile.coverPhoto = fileUrl;
+  await profile.save();
+  return profile;
+};
+
+// upload a new resume for the currently authenticated user
+export const uploadResume = async (userId, fileUrl) => {
+  const profile = await findOrCreateProfile(userId);
+  profile.resumeUrl = fileUrl;
+  profile.profileCompletion = calculateCompletion(profile);
+  await profile.save();
+  return profile;
+};
+
