@@ -1,50 +1,9 @@
-import { createApi, fetchBaseQuery, FetchArgs, FetchBaseQueryError} from "@reduxjs/toolkit/query/react";
-import type { BaseQueryFn } from "@reduxjs/toolkit/query";
-import type { RootState } from "@/redux/store";
-import { setCredentials, setAccessToken, setUser, clearCredentials } from "./authSlice";
+import { createApi,  FetchBaseQueryError} from "@reduxjs/toolkit/query/react";
+import { baseQuery, baseQueryWithReauth } from "@/redux/baseQuery";
+import { setCredentials, setUser } from "./authSlice";
 import {ApiResponse, User, LoginData, RegisterPayload, LoginPayload , ResendVerificationPayload , VerifyEmailPayload ,
   ForgotPasswordPayload, ResetPasswordPayload} from "@/types/auth.types";
 
-// Plain base query , attaches token IF one exists, harmless when it doesn't
-const baseQuery = fetchBaseQuery({
-  baseUrl: process.env.NEXT_PUBLIC_API_URL,
-  credentials: "include",
-  
-  prepareHeaders: (headers, { getState }) => {
-    const token = (getState() as RootState).auth.accessToken;
-    if (token) headers.set("Authorization", `Bearer ${token}`);
-    return headers;
-  },
-});
-
-// Auto-refresh wrapper , only used by endpoints that explicitly call it
-const baseQueryWithReauth: BaseQueryFn<
-  string | FetchArgs,
-  unknown,
-  FetchBaseQueryError
-> = async (args, api, extraOptions) => {
-  let result = await baseQuery(args, api, extraOptions);
-
-  if (result.error?.status === 401) {
-    const refreshResult = await baseQuery(
-      { url: "/auth/refresh-token", method: "POST" },
-      api,
-      extraOptions
-    );
-
-    if (refreshResult.data) {
-      const newToken = (
-        refreshResult.data as ApiResponse<{ accessToken: string }>
-      ).data.accessToken;
-      api.dispatch(setAccessToken(newToken));
-      result = await baseQuery(args, api, extraOptions);
-    } else {
-      api.dispatch(clearCredentials());
-    }
-  }
-
-  return result;
-};
 
  // RTK Query API slice for auth-related endpoints
 export const authApi = createApi({
@@ -119,6 +78,7 @@ export const authApi = createApi({
         body }),
     }),
 
+        // Protected route , uses baseQueryWithReauth via queryFn, since the default baseQuery above is plain
     getCurrentUser: builder.query<ApiResponse<User>, void>({
      queryFn: async (_arg, api, extraOptions) => {
      const result = await baseQueryWithReauth("/auth/me", api, extraOptions);
