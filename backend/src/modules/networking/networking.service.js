@@ -118,3 +118,193 @@ export const cancelConnectionRequest = async (requesterId, request) => {
     status: "cancelled",
   });
 };
+
+// Removes an accepted connection for either participant.
+export const removeConnection = async (userId, { connectionId }) => {
+  const connection = await Connection.findById(connectionId);
+
+  if (!connection) {
+    throw new ApiError(404, "Connection not found.");
+  }
+
+  const isParticipant =
+    connection.requester.equals(userId) || connection.recipient.equals(userId);
+
+  if (!isParticipant) {
+    throw new ApiError(403, "You are not authorized to remove this connection.");
+  }
+
+  if (connection.status !== "accepted") {
+    throw new ApiError(400, "Only accepted connections can be removed.");
+  }
+
+  await connection.deleteOne();
+
+  return { _id: connection._id };
+};
+
+const SAFE_USER_PROFILE_FIELDS = "firstName lastName username role avatar";
+
+const getPaginationValues = ({ page = 1, limit = 10 }) => {
+  const currentPage = Number(page);
+  const pageSize = Number(limit);
+
+  return {
+    currentPage,
+    pageSize,
+    skip: (currentPage - 1) * pageSize,
+  };
+};
+
+const safeProfile = (user) => {
+  if (!user) return null;
+
+  return {
+    _id: user._id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    username: user.username,
+    role: user.role,
+    avatar: user.avatar,
+  };
+};
+
+// Lists accepted connections and returns the other participant's safe profile.
+export const getConnections = async (userId, { page = 1, limit = 10 }) => {
+  const { currentPage, pageSize, skip } = getPaginationValues({ page, limit });
+  const connectionFilter = {
+    status: "accepted",
+    $or: [{ requester: userId }, { recipient: userId }],
+  };
+
+  const connectionsQuery = Connection.find(connectionFilter)
+    .populate("requester", SAFE_USER_PROFILE_FIELDS)
+    .populate("recipient", SAFE_USER_PROFILE_FIELDS)
+    .sort({ respondedAt: -1, createdAt: -1 })
+    .skip(skip)
+    .limit(pageSize);
+
+  const [connections, totalConnections] = await Promise.all([
+    connectionsQuery,
+    Connection.countDocuments(connectionFilter),
+  ]);
+
+  const currentUserId = userId.toString();
+  return {
+    connections: connections.map((connection) => {
+      const requesterId = connection.requester?._id?.toString();
+      const otherUser =
+        requesterId === currentUserId ? connection.recipient : connection.requester;
+
+      return {
+        _id: connection._id,
+        user: safeProfile(otherUser),
+        connectedAt: connection.respondedAt,
+      };
+    }),
+    pagination: {
+      currentPage,
+      limit: pageSize,
+      totalConnections,
+      totalPages: Math.ceil(totalConnections / pageSize),
+    },
+  };
+};
+
+const getPendingConnectionRequests = async (
+  userId,
+  { page = 1, limit = 10 },
+  { userField, profileField }
+) => {
+  const { currentPage, pageSize, skip } = getPaginationValues({ page, limit });
+  const requestFilter = getPendingRequestFilter(userId, userField);
+
+  const requestsQuery = Connection.find(requestFilter)
+    .populate(profileField, SAFE_USER_PROFILE_FIELDS)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(pageSize);
+
+  const [requests, totalRequests] = await Promise.all([
+    requestsQuery,
+    Connection.countDocuments(requestFilter),
+  ]);
+
+  return {
+    requests: requests.map((request) => ({
+      _id: request._id,
+      [profileField]: safeProfile(request[profileField]),
+      createdAt: request.createdAt,
+    })),
+    pagination: {
+      currentPage,
+      limit: pageSize,
+      totalRequests,
+      totalPages: Math.ceil(totalRequests / pageSize),
+    },
+  };
+};
+
+const getPendingRequestFilter = (userId, userField) => ({
+  status: "pending",
+  [userField]: userId,
+});
+
+// Lists pending requests received by the authenticated user.
+export const getReceivedConnectionRequests = async (userId, pagination = {}) => {
+  return getPendingConnectionRequests(userId, pagination, {
+    userField: "recipient",
+    profileField: "requester",
+  });
+};
+
+// Lists pending requests sent by the authenticated user.
+export const getSentConnectionRequests = async (userId, pagination = {}) => {
+  return getPendingConnectionRequests(userId, pagination, {
+    userField: "requester",
+    profileField: "recipient",
+  });
+};
+
+// Counts pending connection requests received by the authenticated user.
+export const getReceivedConnectionRequestCount = async (userId) => {
+  const count = await Connection.countDocuments(
+    getPendingRequestFilter(userId, "recipient")
+  );
+
+  return { count };
+};
+
+// Gets the active connection status between the authenticated user and a target user.
+export const getConnectionStatus = async (currentUserId, { userId }) => {
+  if (currentUserId.toString() === userId) {
+    throw new ApiError(400, "You cannot check connection status with yourself.");
+  }
+
+  const targetUser = await User.findById(userId);
+  if (!targetUser) {
+    throw new ApiError(404, "User account not found.");
+  }
+
+  const connection = await Connection.findOne({
+    status: { $in: ["pending", "accepted"] },
+    $or: [
+      { requester: currentUserId, recipient: targetUser._id },
+      { requester: targetUser._id, recipient: currentUserId },
+    ],
+  });
+
+  if (!connection) {
+    return { status: "none" };
+  }
+
+  if (connection.status === "accepted") {
+    return { status: "accepted" };
+  }
+
+  return {
+    status: connection.requester.equals(currentUserId)
+      ? "pending_sent"
+      : "pending_received",
+  };
+};

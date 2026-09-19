@@ -1,9 +1,9 @@
 import ApiError from "../utils/ApiError.js" ;
 
-const validateRequest = (schema) => {
+const validateRequest = (schema, source = "body") => {
     return (req, res, next) => {
 
-        const { error } = schema.validate( req.body, { abortEarly: false });
+        const { error } = schema.validate( req[source], { abortEarly: false });
 
         if (error) {
             throw new ApiError(
