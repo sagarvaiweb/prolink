@@ -1,6 +1,11 @@
 import { Connection } from "../../models/Connection.model.js";
 import { Follow } from "../../models/Follow.model.js";
+import { NOTIFICATION_TYPES } from "../../models/Notification.model.js";
 import { User } from "../../models/User.model.js";
+import {
+  createConnectionNotification,
+  createFollowNotification,
+} from "../notification/notification.service.js";
 import ApiError from "../../utils/ApiError.js";
 
 // Creates a pending professional connection request for the authenticated user.
@@ -48,6 +53,13 @@ export const sendConnectionRequest = async (senderId, { recipient }) => {
     status: "pending",
   });
 
+  await createConnectionNotification({
+    recipient: recipientUser._id,
+    actor: sender._id,
+    type: NOTIFICATION_TYPES.CONNECTION_REQUEST_RECEIVED,
+    connection: connection._id,
+  });
+
   return {
     _id: connection._id,
     requester: connection.requester,
@@ -81,6 +93,20 @@ const respondToConnectionRequest = async (
   connection.status = status;
   connection.respondedAt = new Date();
   await connection.save();
+
+  const notificationType = {
+    accepted: NOTIFICATION_TYPES.CONNECTION_REQUEST_ACCEPTED,
+    rejected: NOTIFICATION_TYPES.CONNECTION_REQUEST_REJECTED,
+  }[status];
+
+  if (notificationType) {
+    await createConnectionNotification({
+      recipient: connection.requester,
+      actor: userId,
+      type: notificationType,
+      connection: connection._id,
+    });
+  }
 
   return {
     _id: connection._id,
@@ -340,19 +366,12 @@ export const followUser = async (currentUserId, { userId }) => {
     throw new ApiError(409, "You are already following this user.");
   }
 
+  let follow;
   try {
-    const follow = await Follow.create({
+    follow = await Follow.create({
       follower: currentUserId,
       following: targetUser._id,
     });
-
-    return {
-      _id: follow._id,
-      follower: follow.follower,
-      following: follow.following,
-      createdAt: follow.createdAt,
-      updatedAt: follow.updatedAt,
-    };
   } catch (error) {
     if (error?.code === 11000) {
       throw new ApiError(409, "You are already following this user.");
@@ -360,6 +379,21 @@ export const followUser = async (currentUserId, { userId }) => {
 
     throw error;
   }
+
+  await createFollowNotification({
+    recipient: targetUser._id,
+    actor: currentUserId,
+    type: NOTIFICATION_TYPES.FOLLOW_RECEIVED,
+    follow: follow._id,
+  });
+
+  return {
+    _id: follow._id,
+    follower: follow.follower,
+    following: follow.following,
+    createdAt: follow.createdAt,
+    updatedAt: follow.updatedAt,
+  };
 };
 
 // Removes the authenticated user's directional follow relationship.
