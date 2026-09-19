@@ -18,7 +18,7 @@ const baseQuery = fetchBaseQuery({
 });
 
 // Auto-refresh wrapper , only used by endpoints that explicitly call it
-const baseQueryWithReauth: BaseQueryFn<
+export const baseQueryWithReauth: BaseQueryFn<
   string | FetchArgs,
   unknown,
   FetchBaseQueryError
