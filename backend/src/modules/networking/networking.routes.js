@@ -4,6 +4,7 @@ import {
   cancelConnectionRequest,
   getConnectionStatus,
   getConnections,
+  getConnectionSuggestions,
   getMutualConnections,
   getFollowers,
   getFollowing,
@@ -62,6 +63,13 @@ router.get(
   authenticateUser,
   validateRequest(connectionStatusSchema, "params"),
   getConnectionStatus
+);
+
+router.get(
+  "/connections/suggestions",
+  authenticateUser,
+  validateRequest(getConnectionsSchema, "query"),
+  getConnectionSuggestions
 );
 
 router.get(

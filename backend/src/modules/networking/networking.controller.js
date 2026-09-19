@@ -176,3 +176,16 @@ export const getMutualConnections = asyncHandler(async (req, res) => {
     new ApiResponse(200, result, "Mutual connections fetched successfully.")
   );
 });
+
+// Lists suggested users for the authenticated user to connect with.
+export const getConnectionSuggestions = asyncHandler(async (req, res) => {
+  const result = await networkingService.getConnectionSuggestions(
+    req.user._id,
+    req.query,
+    req.user.role
+  );
+
+  return res.status(200).json(
+    new ApiResponse(200, result, "Connection suggestions fetched successfully.")
+  );
+});

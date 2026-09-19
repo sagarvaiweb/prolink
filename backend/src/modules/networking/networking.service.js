@@ -570,3 +570,179 @@ export const getMutualConnections = async (
     },
   };
 };
+
+const getConnectionSuggestionsPipeline = (
+  currentUserId,
+  currentUserRole,
+  currentConnectionUserIds,
+  skip,
+  limit
+) => [
+  {
+    $match: {
+      _id: { $ne: currentUserId },
+      accountStatus: "active",
+    },
+  },
+  {
+    $lookup: {
+      from: Connection.collection.name,
+      let: { candidateUserId: "$_id" },
+      pipeline: [
+        {
+          $match: {
+            status: { $in: ["pending", "accepted"] },
+            $expr: {
+              $and: [
+                {
+                  $or: [
+                    {
+                      $and: [
+                        { $eq: ["$requester", currentUserId] },
+                        { $eq: ["$recipient", "$$candidateUserId"] },
+                      ],
+                    },
+                    {
+                      $and: [
+                        { $eq: ["$requester", "$$candidateUserId"] },
+                        { $eq: ["$recipient", currentUserId] },
+                      ],
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      ],
+      as: "existingConnections",
+    },
+  },
+  { $match: { existingConnections: { $eq: [] } } },
+  {
+    $lookup: {
+      from: Connection.collection.name,
+      let: { candidateUserId: "$_id" },
+      pipeline: [
+        {
+          $match: {
+            status: "accepted",
+            $expr: {
+              $or: [
+                { $eq: ["$requester", "$$candidateUserId"] },
+                { $eq: ["$recipient", "$$candidateUserId"] },
+              ],
+            },
+          },
+        },
+        {
+          $project: {
+            connectedUser: {
+              $cond: [
+                { $eq: ["$requester", "$$candidateUserId"] },
+                "$recipient",
+                "$requester",
+              ],
+            },
+          },
+        },
+      ],
+      as: "candidateConnections",
+    },
+  },
+  {
+    $addFields: {
+      mutualConnectionCount: {
+        $size: {
+          $setIntersection: [
+            currentConnectionUserIds,
+            {
+              $map: {
+                input: "$candidateConnections",
+                as: "connection",
+                in: "$$connection.connectedUser",
+              },
+            },
+          ],
+        },
+      },
+      roleMatch: { $cond: [{ $eq: ["$role", currentUserRole] }, 1, 0] },
+    },
+  },
+  {
+    $facet: {
+      users: [
+        {
+          $sort: {
+            mutualConnectionCount: -1,
+            roleMatch: -1,
+            firstName: 1,
+            lastName: 1,
+            _id: 1,
+          },
+        },
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $project: {
+            _id: 1,
+            firstName: 1,
+            lastName: 1,
+            username: 1,
+            role: 1,
+            avatar: 1,
+          },
+        },
+      ],
+      metadata: [{ $count: "totalUsers" }],
+    },
+  },
+];
+
+const getAcceptedConnectionUserIds = async (currentUserId) => {
+  const connections = await Connection.find({
+    status: "accepted",
+    $or: [{ requester: currentUserId }, { recipient: currentUserId }],
+  })
+    .select("requester recipient")
+    .lean();
+  const currentUserIdString = currentUserId.toString();
+
+  return connections
+    .map((connection) =>
+      connection.requester.toString() === currentUserIdString
+        ? connection.recipient
+        : connection.requester
+    )
+    .filter((userId) => userId.toString() !== currentUserIdString);
+};
+
+// Lists active users who are not pending or accepted connections of the current user.
+export const getConnectionSuggestions = async (
+  currentUserId,
+  { page = 1, limit = 10 },
+  currentUserRole
+) => {
+  const { currentPage, pageSize, skip } = getPaginationValues({ page, limit });
+  const currentConnectionUserIds = await getAcceptedConnectionUserIds(currentUserId);
+  const [result = { users: [], metadata: [] }] = await User.aggregate(
+    getConnectionSuggestionsPipeline(
+      currentUserId,
+      currentUserRole,
+      currentConnectionUserIds,
+      skip,
+      pageSize
+    )
+  );
+  const totalUsers = result.metadata[0]?.totalUsers ?? 0;
+
+  return {
+    users: result.users,
+    pagination: {
+      currentPage,
+      limit: pageSize,
+      totalUsers,
+      totalPages: Math.ceil(totalUsers / pageSize),
+    },
+  };
+};
