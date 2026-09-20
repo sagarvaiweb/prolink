@@ -9,6 +9,7 @@ import {ApiResponse, User, LoginData, RegisterPayload, LoginPayload , ResendVeri
 export const authApi = createApi({
   reducerPath: "authApi",
   baseQuery, // default = plain, used by register/login
+  tagTypes: ["User"],
 
   endpoints: (builder) => ({
     register: builder.mutation<ApiResponse<User>, RegisterPayload>({
@@ -85,6 +86,8 @@ export const authApi = createApi({
      return result as { data: ApiResponse<User> } | { error: FetchBaseQueryError };
     },
 
+    providesTags: ["User"],
+    
      async onQueryStarted(_arg, { dispatch, queryFulfilled }) {
      try {
        const response = await queryFulfilled;

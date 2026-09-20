@@ -9,9 +9,9 @@ const createStorage = (folder, allowedFormats) =>
     cloudinary,
     params: {
       folder: `prolink/${folder}`,
-      allowed_formats: allowedFormats,
-      // "raw" resource_type is required for non-image files like PDFs
-      resource_type: folder === "resumes" ? "raw" : "image",
+      resource_type: "image", //  PDFs uploaded as "image" type bypass the raw/zip restriction entirely
+      format: "pdf",
+      allowed_formats: ["pdf"],
     },
   });
 

@@ -12,6 +12,7 @@ import EditProfileModal from "@/components/profile/EditProfileModal";
 import ExperienceForm from "@/components/profile/ExperienceForm";
 import EducationForm from "@/components/profile/EducationForm";
 import { Experience , Education } from "@/types/profile.types";
+import ResumeUpload from "@/components/profile/ResumeUpload";
 
 
 export default function ProfilePage() {
@@ -64,7 +65,10 @@ export default function ProfilePage() {
               <EducationList
                 education={data.data.education}
                 onAdd={openAddEducation}
-                onEdit={openEditEducation} />
+                onEdit={openEditEducation} 
+              />
+
+              <ResumeUpload currentResumeUrl={data.data.resumeUrl} />
 
               <SkillsEditor skills={data.data.skills} />
 

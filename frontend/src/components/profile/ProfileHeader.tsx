@@ -3,6 +3,9 @@
 import { MapPin, Pencil } from "lucide-react";
 import { Profile } from "@/types/profile.types";
 import { User } from "@/types/auth.types";
+import AvatarUpload from "./AvatarUpload";
+import CoverPhotoUpload from "./CoverPhotoUpload";
+
 
 interface Props {
   profile: Profile;
@@ -13,21 +16,16 @@ interface Props {
 export default function ProfileHeader({ profile, user, onEdit }: Props) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-      <div className="h-32 bg-linear-to-r from-primary-900 to-primary-700" />
+      <CoverPhotoUpload currentCover={profile.coverPhoto} />
 
       <div className="px-6 pb-6">
         <div className="flex items-end justify-between -mt-12">
-          <div className="w-24 h-24 rounded-full border-4 border-white bg-gray-100 overflow-hidden">
-            {user.avatar ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={user.avatar} alt={user.firstName} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-primary-800 text-white text-2xl font-bold">
-                {user.firstName[0]}
-                {user.lastName[0]}
-              </div>
-            )}
-          </div>
+          
+          <AvatarUpload
+            currentAvatar={user.avatar}
+            firstName={user.firstName}
+            lastName={user.lastName}
+          />
 
           <button
             onClick={onEdit}

@@ -60,6 +60,34 @@ export const profileApi = createApi({
       query: (body) => ({ url: "/profiles/me/skills", method: "PATCH", body }),
       invalidatesTags: ["Profile"],
     }),
+
+    uploadProfilePhoto: builder.mutation<ApiResponse<{ avatar: string }>, FormData>({
+      query: (formData) => ({
+        url: "/profiles/me/photo",
+        method: "POST",
+        body: formData,
+      }),
+      invalidatesTags: ["Profile"],
+    }),
+
+    uploadCoverPhoto: builder.mutation<ApiResponse<Profile>, FormData>({
+       query: (formData) => ({
+         url: "/profiles/me/cover",
+         method: "POST",
+         body: formData,
+       }),
+       invalidatesTags: ["Profile"],
+    }),
+
+    uploadResume: builder.mutation<ApiResponse<Profile>, FormData>({
+      query: (formData) => ({
+        url: "/profiles/me/resume",
+        method: "POST",
+        body: formData,
+      }),
+      invalidatesTags: ["Profile"],
+    }),
+
   }),
 });
 
@@ -67,5 +95,6 @@ export const {
   useGetMyProfileQuery, useGetProfileByUserIdQuery, useUpdateProfileMutation,
   useAddExperienceMutation, useUpdateExperienceMutation, useDeleteExperienceMutation,
   useAddEducationMutation, useUpdateEducationMutation, useDeleteEducationMutation,
-  useUpdateSkillsMutation,
+  useUpdateSkillsMutation, useUploadProfilePhotoMutation, useUploadCoverPhotoMutation,
+  useUploadResumeMutation,
 } = profileApi;
