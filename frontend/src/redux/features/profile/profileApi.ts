@@ -2,8 +2,9 @@ import { createApi } from "@reduxjs/toolkit/query/react";
 import { baseQueryWithReauth } from "@/redux/baseQuery";
 import { ApiResponse } from "@/types/auth.types";
 import {
-  Profile, UpdateProfilePayload, ExperiencePayload, EducationPayload, UpdateSkillsPayload,
+  Profile, UpdateProfilePayload, ExperiencePayload, EducationPayload, UpdateSkillsPayload, PopulatedProfile,
 } from "@/types/profile.types";
+
 
 export const profileApi = createApi({
   reducerPath: "profileApi",
@@ -17,7 +18,7 @@ export const profileApi = createApi({
       providesTags: ["Profile"],
     }),
 
-    getProfileByUserId: builder.query<ApiResponse<Profile>, string>({
+    getProfileByUserId: builder.query<ApiResponse<PopulatedProfile>, string>({
       query: (userId) => `/profiles/${userId}`,
     }),
 
@@ -67,7 +68,7 @@ export const profileApi = createApi({
         method: "POST",
         body: formData,
       }),
-      invalidatesTags: ["Profile"],
+      
     }),
 
     uploadCoverPhoto: builder.mutation<ApiResponse<Profile>, FormData>({

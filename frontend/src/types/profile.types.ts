@@ -34,6 +34,18 @@ export interface Profile {
   viewCount: number;
 }
 
+// Add this new interface, alongside  existing Profile interface
+export interface PopulatedProfile extends Omit<Profile, "user"> {
+  user: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    username: string;
+    avatar?: string;
+    role: string;
+  };
+}
+
 export interface UpdateProfilePayload {
   headline?: string;
   bio?: string;
