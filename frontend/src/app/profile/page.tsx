@@ -7,9 +7,11 @@ import { useAppSelector } from "@/redux/hooks";
 import ProfileHeader from "@/components/profile/ProfileHeader";
 import SkillsEditor from "@/components/profile/SkillsEditor";
 import ExperienceList from "@/components/profile/ExperienceList";
+import EducationList from "@/components/profile/EducationList";
 import EditProfileModal from "@/components/profile/EditProfileModal";
 import ExperienceForm from "@/components/profile/ExperienceForm";
-import { Experience } from "@/types/profile.types";
+import EducationForm from "@/components/profile/EducationForm";
+import { Experience , Education } from "@/types/profile.types";
 
 
 export default function ProfilePage() {
@@ -17,8 +19,13 @@ export default function ProfilePage() {
   const { data, isLoading, isError } = useGetMyProfileQuery();
 
   const [isEditOpen, setIsEditOpen] = useState(false);
+
   const [isExperienceFormOpen, setIsExperienceFormOpen] = useState(false);
   const [editingExperience, setEditingExperience] = useState<Experience | null>(null);
+
+  const [isEducationFormOpen, setIsEducationFormOpen] = useState(false);
+  const [editingEducation, setEditingEducation] = useState<Education | null>(null);
+
 
   const openAddExperience = () => {
     setEditingExperience(null);
@@ -28,6 +35,15 @@ export default function ProfilePage() {
   const openEditExperience = (exp: Experience) => {
     setEditingExperience(exp);
     setIsExperienceFormOpen(true);
+  };
+
+  const openAddEducation = () => {
+    setEditingEducation(null);
+    setIsEducationFormOpen(true);
+  };
+  const openEditEducation = (edu: Education) => {
+    setEditingEducation(edu);
+    setIsEducationFormOpen(true);
   };
 
   return (
@@ -45,6 +61,11 @@ export default function ProfilePage() {
                 onAdd={openAddExperience}
                 onEdit={openEditExperience} />  
 
+              <EducationList
+                education={data.data.education}
+                onAdd={openAddEducation}
+                onEdit={openEditEducation} />
+
               <SkillsEditor skills={data.data.skills} />
 
               <EditProfileModal
@@ -55,8 +76,13 @@ export default function ProfilePage() {
               <ExperienceForm
                 isOpen={isExperienceFormOpen}
                 onClose={() => setIsExperienceFormOpen(false)}
-                editingExperience={editingExperience} />  
-                
+                editingExperience={editingExperience} /> 
+
+              <EducationForm
+                isOpen={isEducationFormOpen}
+                onClose={() => setIsEducationFormOpen(false)}
+                editingEducation={editingEducation} /> 
+
             </>
           )}
         </div>
