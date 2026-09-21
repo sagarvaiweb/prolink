@@ -1,2 +1,21 @@
 /* 1. In Tailwind v4, this single directive replaces all old @tailwind rules */
 @import "tailwindcss";
+
+
+@theme {
+  --color-primary-50: #EEF2FB;
+  --color-primary-100: #D9E2F5;
+  --color-primary-200: #B3C5EB;
+  --color-primary-300: #8CA8E0;
+  --color-primary-400: #5A7BC7;
+  --color-primary-500: #3A5AA8;
+  --color-primary-600: #2A4A8A;
+  --color-primary-700: #1D3A70;
+  --color-primary-800: #16326B;
+  --color-primary-900: #0F1F4D;
+  --color-primary-950: #0A1533;
+
+  --color-accent-50: #FFFBEB;
+  --color-accent-500: #F5B914;
+  --color-accent-600: #D9A00F;
+}
