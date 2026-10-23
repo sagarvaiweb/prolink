@@ -11,6 +11,7 @@ export interface User {
   lastName: string;
   username: string;
   email: string;
+  avatar: string;
   role: "student" | "professional" | "recruiter" | "admin";
   isEmailVerified: boolean;
 }
