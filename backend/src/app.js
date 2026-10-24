@@ -6,6 +6,7 @@ import errorHandler from "./middlewares/error.middleware.js";
 import authRoutes from "./modules/auth/auth.routes.js" ;
 import userRoutes from "./modules/user/user.routes.js" ;
 import profileRoutes from "./modules/profile/profile.routes.js" ;
+import connectionRoutes from "./modules/connection/connection.routes.js";
 
 const app = express() ;
 
@@ -26,6 +27,7 @@ app.use(passport.initialize());
 app.use("/api/auth", authRoutes); 
 app.use("/api/users", userRoutes);  
 app.use("/api/profiles", profileRoutes);
+app.use("/api/connections", connectionRoutes);
 
 // error handler middleware i.e always remain at the last of all middlewares
 app.use(errorHandler) ;
