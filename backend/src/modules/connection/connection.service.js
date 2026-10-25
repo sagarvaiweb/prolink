@@ -31,6 +31,41 @@ const handleDuplicatePair = (error) => {
   throw error;
 };
 
+const getPagination = ({ page = 1, limit = 10 }) => {
+  const currentPage = Number(page);
+  const pageSize = Number(limit);
+
+  return {
+    page: currentPage,
+    limit: pageSize,
+    skip: (currentPage - 1) * pageSize,
+  };
+};
+
+const getConnectionPage = async (filter, pagination) => {
+  const { page, limit, skip } = getPagination(pagination);
+  const [connections, total] = await Promise.all([
+    Connection.find(filter)
+      .populate("requester", "firstName lastName username avatar role")
+      .populate("recipient", "firstName lastName username avatar role")
+      .sort({ createdAt: -1, _id: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Connection.countDocuments(filter),
+  ]);
+
+  return {
+    connections,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+};
+
 export const sendConnectionRequest = async (requester, recipientId) => {
   ensureUserAccountIsActive(requester);
 
@@ -177,4 +212,185 @@ export const removeConnection = async (user, connectionId) => {
   }
 
   await connection.deleteOne();
+};
+
+export const getMyConnections = async (user, pagination) => {
+  ensureUserAccountIsActive(user);
+
+  return getConnectionPage(
+    {
+      status: "accepted",
+      $or: [{ requester: user._id }, { recipient: user._id }],
+    },
+    pagination
+  );
+};
+
+export const getPendingRequests = async (recipient, pagination) => {
+  ensureUserAccountIsActive(recipient);
+
+  return getConnectionPage(
+    { recipient: recipient._id, status: "pending" },
+    pagination
+  );
+};
+
+export const getSentRequests = async (requester, pagination) => {
+  ensureUserAccountIsActive(requester);
+
+  return getConnectionPage(
+    { requester: requester._id, status: "pending" },
+    pagination
+  );
+};
+
+export const getSuggestions = async (user, pagination) => {
+  ensureUserAccountIsActive(user);
+
+  const { page, limit, skip } = getPagination(pagination);
+  const acceptedConnections = await Connection.find({
+    status: "accepted",
+    $or: [{ requester: user._id }, { recipient: user._id }],
+  })
+    .select("requester recipient")
+    .lean();
+
+  const directConnectionIds = new Set(
+    acceptedConnections.map((connection) =>
+      String(
+        connection.requester.equals(user._id)
+          ? connection.recipient
+          : connection.requester
+      )
+    )
+  );
+
+  if (directConnectionIds.size === 0) {
+    return {
+      suggestions: [],
+      pagination: { total: 0, page, limit, totalPages: 0 },
+    };
+  }
+
+  const [activeDirectConnections, pendingConnections] = await Promise.all([
+    User.find({
+      _id: { $in: [...directConnectionIds] },
+      accountStatus: "active",
+    })
+      .select("_id")
+      .lean(),
+    Connection.find({
+      status: "pending",
+      $or: [{ requester: user._id }, { recipient: user._id }],
+    })
+      .select("requester recipient")
+      .lean(),
+  ]);
+  const directFriendObjectIds = activeDirectConnections.map(
+    (connection) => connection._id
+  );
+
+  if (directFriendObjectIds.length === 0) {
+    return {
+      suggestions: [],
+      pagination: { total: 0, page, limit, totalPages: 0 },
+    };
+  }
+
+  const pendingUserIds = new Set(
+    pendingConnections.map((connection) =>
+      String(
+        connection.requester.equals(user._id)
+          ? connection.recipient
+          : connection.requester
+      )
+    )
+  );
+
+  const excludedObjectIds = [
+    ...new Set([
+      String(user._id),
+      ...directConnectionIds,
+      ...pendingUserIds,
+    ]),
+  ].map((id) => new mongoose.Types.ObjectId(id));
+
+  // Candidate grouping, ranking, and pagination now run in MongoDB
+  const [result] = await Connection.aggregate([
+    {
+      $match: {
+        status: "accepted",
+        $or: [
+          { requester: { $in: directFriendObjectIds } },
+          { recipient: { $in: directFriendObjectIds } },
+        ],
+      },
+    },
+    {
+      $project: {
+        candidateId: {
+          $cond: [
+            { $in: ["$requester", directFriendObjectIds] },
+            "$recipient",
+            "$requester",
+          ],
+        },
+        mutualFriendId: {
+          $cond: [
+            { $in: ["$requester", directFriendObjectIds] },
+            "$requester",
+            "$recipient",
+          ],
+        },
+      },
+    },
+    { $match: { candidateId: { $nin: excludedObjectIds } } },
+    {
+      $group: {
+        _id: "$candidateId",
+        mutualFriendIds: { $addToSet: "$mutualFriendId" },
+      },
+    },
+    {
+      $lookup: {
+        from: User.collection.name,
+        localField: "_id",
+        foreignField: "_id",
+        as: "candidate",
+      },
+    },
+    { $unwind: "$candidate" },
+    { $match: { "candidate.accountStatus": "active" } },
+    {
+      $project: {
+        _id: "$candidate._id",
+        firstName: "$candidate.firstName",
+        lastName: "$candidate.lastName",
+        username: "$candidate.username",
+        avatar: "$candidate.avatar",
+        role: "$candidate.role",
+        mutualConnectionsCount: { $size: "$mutualFriendIds" },
+      },
+    },
+    { $sort: { mutualConnectionsCount: -1, username: 1, _id: 1 } },
+    {
+      $facet: {
+        metadata: [{ $count: "total" }],
+        suggestions: [{ $skip: skip }, { $limit: limit }],
+      },
+    },
+  ]);
+
+  const suggestions = result?.suggestions ?? [];
+  const total = result?.metadata[0]?.total ?? 0;
+
+  return {
+    suggestions,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 };

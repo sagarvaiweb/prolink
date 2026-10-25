@@ -50,3 +50,44 @@ export const removeConnection = asyncHandler(async (req, res) => {
     new ApiResponse(200, null, "Connection removed successfully.")
   );
 });
+
+export const getMyConnections = asyncHandler(async (req, res) => {
+  const connections = await connectionService.getMyConnections(
+    req.user,
+    req.query
+  );
+
+  return res.status(200).json(
+    new ApiResponse(200, connections, "Connections fetched successfully.")
+  );
+});
+
+export const getPendingRequests = asyncHandler(async (req, res) => {
+  const requests = await connectionService.getPendingRequests(
+    req.user,
+    req.query
+  );
+
+  return res.status(200).json(
+    new ApiResponse(200, requests, "Pending connection requests fetched successfully.")
+  );
+});
+
+export const getSentRequests = asyncHandler(async (req, res) => {
+  const requests = await connectionService.getSentRequests(req.user, req.query);
+
+  return res.status(200).json(
+    new ApiResponse(200, requests, "Sent connection requests fetched successfully.")
+  );
+});
+
+export const getSuggestions = asyncHandler(async (req, res) => {
+  const suggestions = await connectionService.getSuggestions(
+    req.user,
+    req.query
+  );
+
+  return res.status(200).json(
+    new ApiResponse(200, suggestions, "Connection suggestions fetched successfully.")
+  );
+});
