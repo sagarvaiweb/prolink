@@ -7,6 +7,7 @@ import authRoutes from "./modules/auth/auth.routes.js" ;
 import userRoutes from "./modules/user/user.routes.js" ;
 import profileRoutes from "./modules/profile/profile.routes.js" ;
 import connectionRoutes from "./modules/connection/connection.routes.js";
+import followRoutes from "./modules/follow/follow.routes.js";
 
 const app = express() ;
 
@@ -28,6 +29,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);  
 app.use("/api/profiles", profileRoutes);
 app.use("/api/connections", connectionRoutes);
+app.use("/api/follow", followRoutes);
 
 // error handler middleware i.e always remain at the last of all middlewares
 app.use(errorHandler) ;
