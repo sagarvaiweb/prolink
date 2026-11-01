@@ -3,6 +3,9 @@ import { baseQueryWithReauth } from "@/redux/baseQuery";
 import type {
   ConnectionActionResponse,
   ConnectionPageResponse,
+  FollowActionResponse,
+  FollowPageResponse,
+  RelationshipStatusResponse,
   SuggestionsPageResponse,
 } from "@/types/network.types";
 
@@ -11,10 +14,14 @@ interface ListParams {
   limit: number;
 }
 
+interface FollowListParams extends ListParams {
+  userId: string;
+}
+
 export const networkApi = createApi({
   reducerPath: "networkApi",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["ConnectionList"],
+  tagTypes: ["ConnectionList", "FollowList", "RelationshipStatus"],
 
   endpoints: (builder) => ({
     getMyConnections: builder.query<ConnectionPageResponse, ListParams>({
@@ -45,13 +52,51 @@ export const networkApi = createApi({
       }),
       providesTags: ["ConnectionList"],
     }),
+    getRelationshipStatus: builder.query<RelationshipStatusResponse, string>({
+      query: (userId) => `/connections/status/${userId}`,
+      providesTags: (_result, _error, userId) => [
+        { type: "RelationshipStatus", id: userId },
+      ],
+    }),
+    getFollowers: builder.query<FollowPageResponse, FollowListParams>({
+      query: ({ userId, page, limit }) => ({
+        url: `/follow/followers/${userId}`,
+        params: { page, limit },
+      }),
+      providesTags: (_result, _error, { userId }) => [
+        { type: "FollowList", id: userId },
+      ],
+    }),
+    getFollowing: builder.query<FollowPageResponse, FollowListParams>({
+      query: ({ userId, page, limit }) => ({
+        url: `/follow/following/${userId}`,
+        params: { page, limit },
+      }),
+      providesTags: (_result, _error, { userId }) => [
+        { type: "FollowList", id: userId },
+      ],
+    }),
+    followUser: builder.mutation<FollowActionResponse, string>({
+      query: (userId) => ({
+        url: `/follow/${userId}`,
+        method: "POST",
+      }),
+      invalidatesTags: ["FollowList", "RelationshipStatus"],
+    }),
+    unfollowUser: builder.mutation<FollowActionResponse, string>({
+      query: (userId) => ({
+        url: `/follow/${userId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["FollowList", "RelationshipStatus"],
+    }),
     sendConnectionRequest: builder.mutation<ConnectionActionResponse, string>({
       query: (recipientId) => ({
         url: "/connections",
         method: "POST",
         body: { recipientId },
       }),
-      invalidatesTags: ["ConnectionList"],
+      invalidatesTags: ["ConnectionList", "RelationshipStatus"],
     }),
     acceptConnectionRequest: builder.mutation<
       ConnectionActionResponse,
@@ -61,7 +106,7 @@ export const networkApi = createApi({
         url: `/connections/${connectionId}/accept`,
         method: "PATCH",
       }),
-      invalidatesTags: ["ConnectionList"],
+      invalidatesTags: ["ConnectionList", "RelationshipStatus"],
     }),
     rejectConnectionRequest: builder.mutation<
       ConnectionActionResponse,
@@ -71,7 +116,7 @@ export const networkApi = createApi({
         url: `/connections/${connectionId}/reject`,
         method: "PATCH",
       }),
-      invalidatesTags: ["ConnectionList"],
+      invalidatesTags: ["ConnectionList", "RelationshipStatus"],
     }),
     cancelConnectionRequest: builder.mutation<
       ConnectionActionResponse,
@@ -80,14 +125,14 @@ export const networkApi = createApi({
         url: `/connections/${connectionId}/cancel`,
         method: "DELETE",
       }),
-      invalidatesTags: ["ConnectionList"],
+      invalidatesTags: ["ConnectionList", "RelationshipStatus"],
     }),
     removeConnection: builder.mutation<ConnectionActionResponse, string>({
       query: (connectionId) => ({
         url: `/connections/${connectionId}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["ConnectionList"],
+      invalidatesTags: ["ConnectionList", "RelationshipStatus"],
     }),
   }),
 });
@@ -97,6 +142,11 @@ export const {
   useGetPendingRequestsQuery,
   useGetSentRequestsQuery,
   useGetSuggestionsQuery,
+  useGetRelationshipStatusQuery,
+  useGetFollowersQuery,
+  useGetFollowingQuery,
+  useFollowUserMutation,
+  useUnfollowUserMutation,
   useSendConnectionRequestMutation,
   useAcceptConnectionRequestMutation,
   useRejectConnectionRequestMutation,

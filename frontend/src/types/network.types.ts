@@ -38,6 +38,39 @@ export interface SuggestionsPage {
   pagination: Pagination;
 }
 
+export interface FollowListUser extends NetworkPerson {
+  followedAt: string;
+}
+
+export interface FollowPage {
+  users: FollowListUser[];
+  pagination: Pagination;
+}
+
+export type ConnectionRelationshipStatus =
+  | "none"
+  | "pending_sent"
+  | "pending_received"
+  | "connected"
+  | "self";
+
+export interface RelationshipStatus {
+  connectionStatus: ConnectionRelationshipStatus;
+  connectionId: string | null;
+  isFollowing: boolean;
+}
+
+export interface FollowRecord {
+  _id: string;
+  follower: string;
+  following: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type ConnectionPageResponse = ApiResponse<ConnectionPage>;
 export type SuggestionsPageResponse = ApiResponse<SuggestionsPage>;
+export type FollowPageResponse = ApiResponse<FollowPage>;
+export type RelationshipStatusResponse = ApiResponse<RelationshipStatus>;
 export type ConnectionActionResponse = ApiResponse<ConnectionRecord | null>;
+export type FollowActionResponse = ApiResponse<FollowRecord | null>;

@@ -8,6 +8,7 @@ import {
   cancelConnectionRequest,
   getMyConnections,
   getPendingRequests,
+  getRelationshipStatus,
   getSentRequests,
   getSuggestions,
   rejectConnectionRequest,
@@ -17,6 +18,7 @@ import {
 import {
   connectionListQuerySchema,
   connectionIdParamsSchema,
+  connectionUserIdParamsSchema,
   sendConnectionRequestSchema,
 } from "./connection.validation.js";
 
@@ -45,6 +47,12 @@ router.get(
   authenticateUser,
   validateQuery(connectionListQuerySchema),
   getSuggestions
+);
+router.get(
+  "/status/:userId",
+  authenticateUser,
+  validateParams(connectionUserIdParamsSchema),
+  getRelationshipStatus
 );
 
 router.post(

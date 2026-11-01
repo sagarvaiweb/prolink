@@ -13,6 +13,10 @@ export const connectionIdParamsSchema = Joi.object({
   connectionId: objectId,
 });
 
+export const connectionUserIdParamsSchema = Joi.object({
+  userId: objectId,
+});
+
 export const connectionListQuerySchema = Joi.object({
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(50).default(10),

@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { Connection } from "../../models/Connection.model.js";
+import { Follow } from "../../models/Follow.model.js";
 import { User } from "../../models/User.model.js";
 import ApiError from "../../utils/ApiError.js";
 
@@ -392,5 +393,53 @@ export const getSuggestions = async (user, pagination) => {
       limit,
       totalPages: Math.ceil(total / limit),
     },
+  };
+};
+
+export const getRelationshipStatus = async (user, targetId) => {
+  ensureUserAccountIsActive(user);
+
+  if (user._id.equals(targetId)) {
+    return {
+      connectionStatus: "self",
+      connectionId: null,
+      isFollowing: false,
+    };
+  }
+
+  const target = await User.findOne({
+    _id: targetId,
+    accountStatus: "active",
+  })
+    .select("_id")
+    .lean();
+
+  if (!target) {
+    throw new ApiError(404, "User account not found");
+  }
+
+  const pairKey = getPairKey(user._id, target._id);
+  const [connection, follow] = await Promise.all([
+    Connection.findOne({ pairKey }).select("_id requester status").lean(),
+    Follow.exists({ follower: user._id, following: target._id }),
+  ]);
+  const connectionStatus =
+    connection?.status === "accepted"
+      ? "connected"
+      : connection?.status === "pending"
+        ? connection.requester.equals(user._id)
+          ? "pending_sent"
+          : "pending_received"
+        : "none";
+
+  return {
+    connectionStatus,
+    connectionId:
+      connectionStatus === "connected" ||
+      connectionStatus === "pending_sent" ||
+      connectionStatus === "pending_received"
+        ? String(connection._id)
+        : null,
+    isFollowing: Boolean(follow),
   };
 };

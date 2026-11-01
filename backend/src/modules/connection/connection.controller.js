@@ -91,3 +91,14 @@ export const getSuggestions = asyncHandler(async (req, res) => {
     new ApiResponse(200, suggestions, "Connection suggestions fetched successfully.")
   );
 });
+
+export const getRelationshipStatus = asyncHandler(async (req, res) => {
+  const status = await connectionService.getRelationshipStatus(
+    req.user,
+    req.params.userId
+  );
+
+  return res.status(200).json(
+    new ApiResponse(200, status, "Relationship status fetched successfully.")
+  );
+});
