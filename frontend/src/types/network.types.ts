@@ -5,8 +5,12 @@ export interface NetworkPerson {
   firstName: string;
   lastName: string;
   username: string;
-  avatar: string;
+  avatar?: string | null;
   role: "student" | "professional" | "recruiter" | "admin";
+}
+
+export interface ConnectionSuggestion extends NetworkPerson {
+  mutualConnectionsCount: number;
 }
 
 export interface ConnectionRecord {
@@ -29,5 +33,11 @@ export interface ConnectionPage {
   pagination: Pagination;
 }
 
+export interface SuggestionsPage {
+  suggestions: ConnectionSuggestion[];
+  pagination: Pagination;
+}
+
 export type ConnectionPageResponse = ApiResponse<ConnectionPage>;
+export type SuggestionsPageResponse = ApiResponse<SuggestionsPage>;
 export type ConnectionActionResponse = ApiResponse<ConnectionRecord | null>;

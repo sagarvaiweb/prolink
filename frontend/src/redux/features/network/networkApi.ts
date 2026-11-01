@@ -3,6 +3,7 @@ import { baseQueryWithReauth } from "@/redux/baseQuery";
 import type {
   ConnectionActionResponse,
   ConnectionPageResponse,
+  SuggestionsPageResponse,
 } from "@/types/network.types";
 
 interface ListParams {
@@ -36,6 +37,21 @@ export const networkApi = createApi({
         params: { page, limit },
       }),
       providesTags: ["ConnectionList"],
+    }),
+    getSuggestions: builder.query<SuggestionsPageResponse, ListParams>({
+      query: ({ page, limit }) => ({
+        url: "/connections/suggestions",
+        params: { page, limit },
+      }),
+      providesTags: ["ConnectionList"],
+    }),
+    sendConnectionRequest: builder.mutation<ConnectionActionResponse, string>({
+      query: (recipientId) => ({
+        url: "/connections",
+        method: "POST",
+        body: { recipientId },
+      }),
+      invalidatesTags: ["ConnectionList"],
     }),
     acceptConnectionRequest: builder.mutation<
       ConnectionActionResponse,
@@ -80,6 +96,8 @@ export const {
   useGetMyConnectionsQuery,
   useGetPendingRequestsQuery,
   useGetSentRequestsQuery,
+  useGetSuggestionsQuery,
+  useSendConnectionRequestMutation,
   useAcceptConnectionRequestMutation,
   useRejectConnectionRequestMutation,
   useCancelConnectionRequestMutation,
