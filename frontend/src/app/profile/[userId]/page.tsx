@@ -7,6 +7,7 @@ import PublicProfileHeader from "@/components/profile/PublicProfileHeader";
 import PublicExperienceList from "@/components/profile/PublicExperienceList";
 import PublicEducationList from "@/components/profile/PublicEducationList";
 import PublicSkillsList from "@/components/profile/PublicSkillsList";
+import ProfileNetworkPanel from "@/components/network/ProfileNetworkPanel";
 import { Lock, FileX } from "lucide-react";
 
 export default function PublicProfilePage() {
@@ -16,7 +17,10 @@ export default function PublicProfilePage() {
   const { data, isLoading, error } = useGetProfileByUserIdQuery(userId);
 
   // RTK Query's error object shape for a failed fetchBaseQuery request
-  const status = (error as any)?.status;
+  const status =
+    typeof error === "object" && error !== null && "status" in error
+      ? error.status
+      : undefined;
 
   return (
     <ProtectedRoute>
@@ -39,7 +43,7 @@ export default function PublicProfilePage() {
               <FileX size={32} className="text-gray-300 mb-3" />
               <h2 className="text-lg font-semibold text-gray-900">Profile not found</h2>
               <p className="text-sm text-gray-500 mt-1">
-                This user doesn't have a profile yet, or the link is incorrect.
+                This user does not have a profile yet, or the link is incorrect.
               </p>
             </div>
           )}
@@ -47,6 +51,7 @@ export default function PublicProfilePage() {
           {data && (
             <>
               <PublicProfileHeader profile={data.data} user={data.data.user} />
+              <ProfileNetworkPanel userId={data.data.user._id} />
               <PublicExperienceList experience={data.data.experience} />
               <PublicEducationList education={data.data.education} />
               <PublicSkillsList skills={data.data.skills} />
