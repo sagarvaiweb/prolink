@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
+  BookmarkCheck,
   ChevronLeft,
   ChevronRight,
   LoaderCircle,
@@ -137,6 +138,13 @@ export default function FeedPage() {
           >
             <ArrowLeft size={16} />
             Back to dashboard
+          </Link>
+          <Link
+            href="/saved-posts"
+            className="mb-6 ml-5 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-primary-800"
+          >
+            <BookmarkCheck size={16} />
+            Saved posts
           </Link>
 
           <header className="mb-6 overflow-hidden rounded-3xl bg-linear-to-br from-primary-950 via-primary-800 to-primary-700 px-6 py-7 text-white sm:px-8">

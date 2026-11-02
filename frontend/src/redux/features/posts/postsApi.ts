@@ -5,11 +5,14 @@ import type {
   AddCommentPayload,
   CommentPage,
   DeletePostResponse,
+  FeedPost,
   FeedResponse,
   PostComment,
   PostLikeState,
   PostResponse,
   ReplyPage,
+  SavePostState,
+  SharePostPayload,
   UpdateCommentPayload,
   UpdatePostPayload,
 } from "@/types/post.types";
@@ -22,7 +25,7 @@ interface FeedParams {
 export const postsApi = createApi({
   reducerPath: "postsApi",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["Feed", "Post", "Comments"],
+  tagTypes: ["Feed", "Post", "Comments", "Saved"],
   endpoints: (builder) => ({
     getFeed: builder.query<FeedResponse, FeedParams>({
       query: ({ page, limit }) => ({
@@ -53,6 +56,22 @@ export const postsApi = createApi({
       }),
       providesTags: (result) => [
         { type: "Feed", id: "LIST" },
+        ...(result?.data.posts.map((post) => ({
+          type: "Post" as const,
+          id: post._id,
+        })) ?? []),
+      ],
+    }),
+    getSavedPosts: builder.query<
+      FeedResponse,
+      FeedParams
+    >({
+      query: ({ page, limit }) => ({
+        url: "/posts/saved",
+        params: { page, limit },
+      }),
+      providesTags: (result) => [
+        { type: "Saved", id: "LIST" },
         ...(result?.data.posts.map((post) => ({
           type: "Post" as const,
           id: post._id,
@@ -187,6 +206,40 @@ export const postsApi = createApi({
         { type: "Feed", id: "LIST" },
       ],
     }),
+    sharePost: builder.mutation<ApiResponse<FeedPost>, SharePostPayload>({
+      query: ({ postId, content, visibility }) => ({
+        url: `/posts/${postId}/share`,
+        method: "POST",
+        body: { content, visibility },
+      }),
+      invalidatesTags: (_result, _error, { postId }) => [
+        { type: "Post", id: postId },
+        { type: "Feed", id: "LIST" },
+        { type: "Saved", id: "LIST" },
+      ],
+    }),
+    savePost: builder.mutation<ApiResponse<SavePostState>, string>({
+      query: (postId) => ({
+        url: `/posts/${postId}/save`,
+        method: "POST",
+      }),
+      invalidatesTags: (_result, _error, postId) => [
+        { type: "Post", id: postId },
+        { type: "Feed", id: "LIST" },
+        { type: "Saved", id: "LIST" },
+      ],
+    }),
+    unsavePost: builder.mutation<ApiResponse<SavePostState>, string>({
+      query: (postId) => ({
+        url: `/posts/${postId}/save`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, postId) => [
+        { type: "Post", id: postId },
+        { type: "Feed", id: "LIST" },
+        { type: "Saved", id: "LIST" },
+      ],
+    }),
   }),
 });
 
@@ -194,6 +247,7 @@ export const {
   useGetFeedQuery,
   useGetPostByIdQuery,
   useGetPostsByUserQuery,
+  useGetSavedPostsQuery,
   useCreatePostMutation,
   useUpdatePostMutation,
   useDeletePostMutation,
@@ -204,4 +258,7 @@ export const {
   useAddPostCommentMutation,
   useUpdatePostCommentMutation,
   useDeletePostCommentMutation,
+  useSharePostMutation,
+  useSavePostMutation,
+  useUnsavePostMutation,
 } = postsApi;

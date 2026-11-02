@@ -14,6 +14,7 @@ import type { FeedPost } from "@/types/post.types";
 import ConfirmationDialog from "@/components/ui/ConfirmationDialog";
 import PostComposer from "./PostComposer";
 import PostEngagement from "./PostEngagement";
+import PostSharingActions from "./PostSharingActions";
 
 interface FeedPostCardProps {
   post: FeedPost;
@@ -173,6 +174,27 @@ export default function FeedPostCard({
                   {originalPost.content}
                 </p>
               )}
+              {originalPost.mediaUrls?.length > 0 && (
+                <div className="mt-3 grid grid-cols-2 gap-1 overflow-hidden rounded-lg">
+                  {originalPost.mediaUrls.slice(0, 4).map((url, index) => (
+                    <a
+                      key={url}
+                      href={url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block max-h-40 overflow-hidden bg-slate-50"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={url}
+                        alt={`Original post attachment ${index + 1}`}
+                        className="h-full max-h-40 w-full object-cover"
+                        loading="lazy"
+                      />
+                    </a>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -229,6 +251,7 @@ export default function FeedPostCard({
             commentCount={post.commentCount}
             currentUserId={currentUserId}
           />
+          <PostSharingActions post={post} />
         </>
       )}
 

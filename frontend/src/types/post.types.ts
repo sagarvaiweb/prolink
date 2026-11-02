@@ -26,6 +26,7 @@ export interface FeedPost {
   updatedAt: string;
   isLiked: boolean;
   isSaved: boolean;
+  savedAt?: string;
 }
 
 export interface PostPagination {
@@ -85,4 +86,15 @@ export interface AddCommentPayload {
 export interface UpdateCommentPayload {
   commentId: string;
   content: string;
+}
+
+export interface SharePostPayload {
+  postId: string;
+  content: string;
+  visibility: PostVisibility;
+}
+
+export interface SavePostState {
+  postId: string;
+  isSaved: boolean;
 }
