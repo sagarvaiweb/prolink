@@ -48,3 +48,41 @@ export interface UpdatePostPayload {
   postId: string;
   formData: FormData;
 }
+
+export interface PostLikeState {
+  likeCount: number;
+  isLiked: boolean;
+}
+
+export interface PostComment {
+  _id: string;
+  post: string;
+  author: PostAuthor;
+  content: string;
+  parentComment: string | null;
+  isEdited: boolean;
+  replyCount?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CommentPage {
+  comments: PostComment[];
+  pagination: PostPagination;
+}
+
+export interface ReplyPage {
+  replies: PostComment[];
+  pagination: PostPagination;
+}
+
+export interface AddCommentPayload {
+  postId: string;
+  content: string;
+  parentComment?: string;
+}
+
+export interface UpdateCommentPayload {
+  commentId: string;
+  content: string;
+}

@@ -13,6 +13,7 @@ import {
 import type { FeedPost } from "@/types/post.types";
 import ConfirmationDialog from "@/components/ui/ConfirmationDialog";
 import PostComposer from "./PostComposer";
+import PostEngagement from "./PostEngagement";
 
 interface FeedPostCardProps {
   post: FeedPost;
@@ -205,17 +206,6 @@ export default function FeedPostCard({
 
           <div className="mx-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 py-3">
             <div className="flex flex-wrap gap-4 text-xs text-slate-500">
-              {post.likeCount > 0 && (
-                <span>
-                  {post.likeCount} {post.likeCount === 1 ? "like" : "likes"}
-                </span>
-              )}
-              {post.commentCount > 0 && (
-                <span>
-                  {post.commentCount}{" "}
-                  {post.commentCount === 1 ? "comment" : "comments"}
-                </span>
-              )}
               {post.shareCount > 0 && (
                 <span>
                   {post.shareCount} {post.shareCount === 1 ? "share" : "shares"}
@@ -232,6 +222,13 @@ export default function FeedPostCard({
               </Link>
             )}
           </div>
+          <PostEngagement
+            postId={post._id}
+            isLiked={post.isLiked}
+            likeCount={post.likeCount}
+            commentCount={post.commentCount}
+            currentUserId={currentUserId}
+          />
         </>
       )}
 
