@@ -8,11 +8,16 @@ import PublicExperienceList from "@/components/profile/PublicExperienceList";
 import PublicEducationList from "@/components/profile/PublicEducationList";
 import PublicSkillsList from "@/components/profile/PublicSkillsList";
 import ProfileNetworkPanel from "@/components/network/ProfileNetworkPanel";
+import ProfilePostsSection from "@/components/posts/ProfilePostsSection";
+import { useAppSelector } from "@/redux/hooks";
 import { Lock, FileX } from "lucide-react";
 
 export default function PublicProfilePage() {
   const params = useParams();
   const userId = params.userId as string;
+  const currentUserId = useAppSelector(
+    (state) => state.auth.user?._id ?? ""
+  );
 
   const { data, isLoading, error } = useGetProfileByUserIdQuery(userId);
 
@@ -52,6 +57,10 @@ export default function PublicProfilePage() {
             <>
               <PublicProfileHeader profile={data.data} user={data.data.user} />
               <ProfileNetworkPanel userId={data.data.user._id} />
+              <ProfilePostsSection
+                userId={data.data.user._id}
+                currentUserId={currentUserId}
+              />
               <PublicExperienceList experience={data.data.experience} />
               <PublicEducationList education={data.data.education} />
               <PublicSkillsList skills={data.data.skills} />

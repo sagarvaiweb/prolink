@@ -17,28 +17,13 @@ import FeedPostCard from "@/components/posts/FeedPostCard";
 import PostComposer from "@/components/posts/PostComposer";
 import {
   useCreatePostMutation,
-  useDeletePostMutation,
   useGetFeedQuery,
-  useUpdatePostMutation,
 } from "@/redux/features/posts/postsApi";
 import { useAppSelector } from "@/redux/hooks";
+import usePostManagement from "@/components/posts/usePostManagement";
+import { getPostErrorMessage } from "@/components/posts/postErrors";
 
 const PAGE_SIZE = 10;
-
-const getErrorMessage = (error: unknown) => {
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "data" in error &&
-    typeof error.data === "object" &&
-    error.data !== null &&
-    "message" in error.data &&
-    typeof error.data.message === "string"
-  ) {
-    return error.data.message;
-  }
-  return "Something went wrong. Please try again.";
-};
 
 function FeedPagination({
   page,
@@ -121,8 +106,12 @@ export default function FeedPage() {
   const { currentData, isLoading, isError, isFetching, refetch } =
     useGetFeedQuery({ page, limit: PAGE_SIZE });
   const [createPost, { isLoading: isCreating }] = useCreatePostMutation();
-  const [updatePost, { isLoading: isUpdating }] = useUpdatePostMutation();
-  const [deletePost, { isLoading: isDeleting }] = useDeletePostMutation();
+  const {
+    handleUpdatePost,
+    handleDeletePost,
+    isUpdating,
+    isDeleting,
+  } = usePostManagement();
   const feed = currentData?.data;
 
   const handleCreatePost = async (formData: FormData) => {
@@ -133,29 +122,7 @@ export default function FeedPage() {
       setComposerVersion((version) => version + 1);
       return true;
     } catch (error) {
-      toast.error(getErrorMessage(error));
-      return false;
-    }
-  };
-
-  const handleUpdatePost = async (postId: string, formData: FormData) => {
-    try {
-      await updatePost({ postId, formData }).unwrap();
-      toast.success("Post updated.");
-      return true;
-    } catch (error) {
-      toast.error(getErrorMessage(error));
-      return false;
-    }
-  };
-
-  const handleDeletePost = async (postId: string) => {
-    try {
-      await deletePost(postId).unwrap();
-      toast.success("Post deleted.");
-      return true;
-    } catch (error) {
-      toast.error(getErrorMessage(error));
+      toast.error(getPostErrorMessage(error));
       return false;
     }
   };

@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { Globe2, LockKeyhole, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import {
+  ExternalLink,
+  Globe2,
+  LockKeyhole,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import type { FeedPost } from "@/types/post.types";
 import ConfirmationDialog from "@/components/ui/ConfirmationDialog";
 import PostComposer from "./PostComposer";
@@ -12,6 +19,7 @@ interface FeedPostCardProps {
   currentUserId: string;
   isDeleting: boolean;
   isUpdating: boolean;
+  showDetailLink?: boolean;
   onUpdate: (postId: string, formData: FormData) => Promise<boolean>;
   onDelete: (postId: string) => Promise<boolean>;
 }
@@ -30,6 +38,7 @@ export default function FeedPostCard({
   currentUserId,
   isDeleting,
   isUpdating,
+  showDetailLink = true,
   onUpdate,
   onDelete,
 }: FeedPostCardProps) {
@@ -194,20 +203,33 @@ export default function FeedPostCard({
             </div>
           )}
 
-          <div className="mx-5 flex flex-wrap gap-4 border-t border-slate-100 py-3 text-xs text-slate-500">
-            {post.likeCount > 0 && (
-              <span>{post.likeCount} {post.likeCount === 1 ? "like" : "likes"}</span>
-            )}
-            {post.commentCount > 0 && (
-              <span>
-                {post.commentCount}{" "}
-                {post.commentCount === 1 ? "comment" : "comments"}
-              </span>
-            )}
-            {post.shareCount > 0 && (
-              <span>
-                {post.shareCount} {post.shareCount === 1 ? "share" : "shares"}
-              </span>
+          <div className="mx-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 py-3">
+            <div className="flex flex-wrap gap-4 text-xs text-slate-500">
+              {post.likeCount > 0 && (
+                <span>
+                  {post.likeCount} {post.likeCount === 1 ? "like" : "likes"}
+                </span>
+              )}
+              {post.commentCount > 0 && (
+                <span>
+                  {post.commentCount}{" "}
+                  {post.commentCount === 1 ? "comment" : "comments"}
+                </span>
+              )}
+              {post.shareCount > 0 && (
+                <span>
+                  {post.shareCount} {post.shareCount === 1 ? "share" : "shares"}
+                </span>
+              )}
+            </div>
+            {showDetailLink && (
+              <Link
+                href={`/posts/${post._id}`}
+                className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-semibold text-primary-800 transition hover:bg-primary-50"
+              >
+                View post
+                <ExternalLink size={14} />
+              </Link>
             )}
           </div>
         </>

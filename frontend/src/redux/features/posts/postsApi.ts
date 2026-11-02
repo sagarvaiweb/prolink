@@ -4,16 +4,12 @@ import type {
   DeletePostResponse,
   FeedResponse,
   PostResponse,
+  UpdatePostPayload,
 } from "@/types/post.types";
 
 interface FeedParams {
   page: number;
   limit: number;
-}
-
-interface UpdatePostPayload {
-  postId: string;
-  formData: FormData;
 }
 
 export const postsApi = createApi({
@@ -24,6 +20,28 @@ export const postsApi = createApi({
     getFeed: builder.query<FeedResponse, FeedParams>({
       query: ({ page, limit }) => ({
         url: "/posts/feed",
+        params: { page, limit },
+      }),
+      providesTags: (result) => [
+        { type: "Feed", id: "LIST" },
+        ...(result?.data.posts.map((post) => ({
+          type: "Post" as const,
+          id: post._id,
+        })) ?? []),
+      ],
+    }),
+    getPostById: builder.query<PostResponse, string>({
+      query: (postId) => `/posts/${postId}`,
+      providesTags: (_result, _error, postId) => [
+        { type: "Post", id: postId },
+      ],
+    }),
+    getPostsByUser: builder.query<
+      FeedResponse,
+      FeedParams & { userId: string }
+    >({
+      query: ({ userId, page, limit }) => ({
+        url: `/posts/user/${userId}`,
         params: { page, limit },
       }),
       providesTags: (result) => [
@@ -68,6 +86,8 @@ export const postsApi = createApi({
 
 export const {
   useGetFeedQuery,
+  useGetPostByIdQuery,
+  useGetPostsByUserQuery,
   useCreatePostMutation,
   useUpdatePostMutation,
   useDeletePostMutation,

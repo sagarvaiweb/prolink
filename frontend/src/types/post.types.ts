@@ -44,3 +44,7 @@ export type FeedResponse = ApiResponse<FeedPage>;
 export type PostResponse = ApiResponse<FeedPost>;
 export type DeletePostResponse = ApiResponse<null>;
 
+export interface UpdatePostPayload {
+  postId: string;
+  formData: FormData;
+}
