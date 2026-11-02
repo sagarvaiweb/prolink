@@ -10,7 +10,11 @@ import type {
   PostComment,
   PostLikeState,
   PostResponse,
+  PostReport,
+  PostReportPage,
   ReplyPage,
+  ReportPostPayload,
+  ReviewPostReportPayload,
   SavePostState,
   SharePostPayload,
   UpdateCommentPayload,
@@ -25,7 +29,7 @@ interface FeedParams {
 export const postsApi = createApi({
   reducerPath: "postsApi",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["Feed", "Post", "Comments", "Saved"],
+  tagTypes: ["Feed", "Post", "Comments", "Saved", "Reports"],
   endpoints: (builder) => ({
     getFeed: builder.query<FeedResponse, FeedParams>({
       query: ({ page, limit }) => ({
@@ -75,6 +79,22 @@ export const postsApi = createApi({
         ...(result?.data.posts.map((post) => ({
           type: "Post" as const,
           id: post._id,
+        })) ?? []),
+      ],
+    }),
+    getPostReports: builder.query<
+      ApiResponse<PostReportPage>,
+      FeedParams
+    >({
+      query: ({ page, limit }) => ({
+        url: "/posts/reports",
+        params: { page, limit },
+      }),
+      providesTags: (result) => [
+        { type: "Reports", id: "LIST" },
+        ...(result?.data.reports.map((report) => ({
+          type: "Reports" as const,
+          id: report._id,
         })) ?? []),
       ],
     }),
@@ -240,6 +260,34 @@ export const postsApi = createApi({
         { type: "Saved", id: "LIST" },
       ],
     }),
+    reportPost: builder.mutation<ApiResponse<PostReport>, ReportPostPayload>({
+      query: ({ postId, reason, details }) => ({
+        url: `/posts/${postId}/report`,
+        method: "POST",
+        body: { reason, details },
+      }),
+      invalidatesTags: [{ type: "Reports", id: "LIST" }],
+    }),
+    reviewPostReport: builder.mutation<
+      ApiResponse<PostReport>,
+      ReviewPostReportPayload
+    >({
+      query: ({ reportId, status }) => ({
+        url: `/posts/reports/${reportId}`,
+        method: "PATCH",
+        body: { status },
+      }),
+      invalidatesTags: (_result, _error, { reportId, status }) => [
+        { type: "Reports", id: "LIST" },
+        { type: "Reports", id: reportId },
+        ...(status === "post_removed"
+          ? [
+              { type: "Feed" as const, id: "LIST" },
+              { type: "Saved" as const, id: "LIST" },
+            ]
+          : []),
+      ],
+    }),
   }),
 });
 
@@ -248,6 +296,7 @@ export const {
   useGetPostByIdQuery,
   useGetPostsByUserQuery,
   useGetSavedPostsQuery,
+  useGetPostReportsQuery,
   useCreatePostMutation,
   useUpdatePostMutation,
   useDeletePostMutation,
@@ -261,4 +310,6 @@ export const {
   useSharePostMutation,
   useSavePostMutation,
   useUnsavePostMutation,
+  useReportPostMutation,
+  useReviewPostReportMutation,
 } = postsApi;

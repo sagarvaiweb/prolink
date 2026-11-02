@@ -10,13 +10,16 @@ import {
 } from "@/redux/features/posts/postsApi";
 import type { FeedPost, PostVisibility } from "@/types/post.types";
 import { getPostErrorMessage } from "@/components/posts/postErrors";
+import PostReportAction from "@/components/posts/PostReportAction";
 
 interface PostSharingActionsProps {
   post: FeedPost;
+  currentUserId: string;
 }
 
 export default function PostSharingActions({
   post,
+  currentUserId,
 }: PostSharingActionsProps) {
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
   const [content, setContent] = useState("");
@@ -117,6 +120,9 @@ export default function PostSharingActions({
           )}
           {isSaved ? "Saved" : "Save"}
         </button>
+        {post.author._id !== currentUserId && (
+          <PostReportAction postId={post._id} />
+        )}
       </div>
 
       {isShareDialogOpen && (

@@ -251,7 +251,7 @@ export default function FeedPostCard({
             commentCount={post.commentCount}
             currentUserId={currentUserId}
           />
-          <PostSharingActions post={post} />
+          <PostSharingActions post={post} currentUserId={currentUserId} />
         </>
       )}
 

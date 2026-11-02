@@ -98,3 +98,41 @@ export interface SavePostState {
   postId: string;
   isSaved: boolean;
 }
+
+export type PostReportReason =
+  | "spam"
+  | "harassment"
+  | "misinformation"
+  | "inappropriate"
+  | "other";
+
+export type PostReportStatus = "pending" | "dismissed" | "post_removed";
+
+export interface ReportPostPayload {
+  postId: string;
+  reason: PostReportReason;
+  details: string;
+}
+
+export interface PostReport {
+  _id: string;
+  post: FeedPost | string | null;
+  reporter: PostAuthor | string;
+  reason: PostReportReason;
+  details: string;
+  status: PostReportStatus;
+  reviewedBy?: PostAuthor | string | null;
+  reviewedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PostReportPage {
+  reports: PostReport[];
+  pagination: PostPagination;
+}
+
+export interface ReviewPostReportPayload {
+  reportId: string;
+  status: Exclude<PostReportStatus, "pending">;
+}

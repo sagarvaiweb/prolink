@@ -10,6 +10,7 @@ import {
   LoaderCircle,
   Network,
   RefreshCw,
+  ShieldCheck,
   UsersRound,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -146,6 +147,15 @@ export default function FeedPage() {
             <BookmarkCheck size={16} />
             Saved posts
           </Link>
+          {user?.role === "admin" && (
+            <Link
+              href="/admin/post-reports"
+              className="mb-6 ml-5 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-primary-800"
+            >
+              <ShieldCheck size={16} />
+              Moderate reports
+            </Link>
+          )}
 
           <header className="mb-6 overflow-hidden rounded-3xl bg-linear-to-br from-primary-950 via-primary-800 to-primary-700 px-6 py-7 text-white sm:px-8">
             <div className="flex items-center gap-4">
