@@ -16,6 +16,7 @@ import {
 import { toast } from "sonner";
 import NetworkPersonCard from "@/components/network/NetworkPersonCard";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
+import ConfirmationDialog from "@/components/ui/ConfirmationDialog";
 import {
   useAcceptConnectionRequestMutation,
   useCancelConnectionRequestMutation,
@@ -110,6 +111,9 @@ export default function NetworkPage() {
   const { user } = useAppSelector((state) => state.auth);
   const [activeTab, setActiveTab] = useState<NetworkTab>("connections");
   const [page, setPage] = useState(1);
+  const [connectionToRemove, setConnectionToRemove] = useState<string | null>(
+    null
+  );
   const params = { page, limit: PAGE_SIZE };
 
   const connectionsQuery = useGetMyConnectionsQuery(params, {
@@ -160,12 +164,13 @@ export default function NetworkPage() {
     }
   };
 
-  const handleRemoveConnection = (connectionId: string) => {
-    if (!window.confirm("Remove this connection?")) return;
-    void runAction(
-      () => removeConnection(connectionId).unwrap(),
+  const handleRemoveConnection = async () => {
+    if (!connectionToRemove) return;
+    await runAction(
+      () => removeConnection(connectionToRemove).unwrap(),
       "Connection removed."
     );
+    setConnectionToRemove(null);
   };
 
   const loading = activeQuery.isLoading;
@@ -399,7 +404,7 @@ export default function NetworkPage() {
                             type="button"
                             disabled={isActionPending}
                             onClick={() =>
-                              handleRemoveConnection(connection._id)
+                              setConnectionToRemove(connection._id)
                             }
                             className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-red-200 hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
                           >
@@ -422,6 +427,16 @@ export default function NetworkPage() {
             </div>
           </section>
         </div>
+        <ConfirmationDialog
+          isOpen={connectionToRemove !== null}
+          title="Remove connection?"
+          description="This person will be removed from your network. You can send them a new connection request later."
+          confirmLabel="Remove connection"
+          isDestructive
+          isPending={isRemoving}
+          onConfirm={handleRemoveConnection}
+          onCancel={() => setConnectionToRemove(null)}
+        />
       </main>
     </ProtectedRoute>
   );

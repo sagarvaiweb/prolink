@@ -15,10 +15,12 @@ import {
 import { toast } from "sonner";
 import NetworkPersonCard from "@/components/network/NetworkPersonCard";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
+import ConfirmationDialog from "@/components/ui/ConfirmationDialog";
 import {
   useGetSuggestionsQuery,
   useSendConnectionRequestMutation,
 } from "@/redux/features/network/networkApi";
+import type { NetworkPerson } from "@/types/network.types";
 
 const PAGE_SIZE = 12;
 
@@ -112,6 +114,9 @@ function SuggestionsLoadingState() {
 
 export default function SuggestionsPage() {
   const [page, setPage] = useState(1);
+  const [personToConnect, setPersonToConnect] = useState<NetworkPerson | null>(
+    null
+  );
   const { currentData, isLoading, isError, isFetching, refetch } =
     useGetSuggestionsQuery({ page, limit: PAGE_SIZE });
   const [sendConnectionRequest, { isLoading: isSendingRequest }] =
@@ -131,6 +136,12 @@ export default function SuggestionsPage() {
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
+  };
+
+  const confirmConnect = async () => {
+    if (!personToConnect) return;
+    await handleConnect(personToConnect._id);
+    setPersonToConnect(null);
   };
 
   return (
@@ -260,7 +271,7 @@ export default function SuggestionsPage() {
                         <button
                           type="button"
                           disabled={isSendingRequest}
-                          onClick={() => void handleConnect(person._id)}
+                          onClick={() => setPersonToConnect(person)}
                           className="inline-flex items-center gap-2 rounded-lg bg-primary-800 px-3 py-2 text-sm font-semibold text-white transition hover:bg-primary-900 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <UserRoundPlus size={16} />
@@ -282,6 +293,19 @@ export default function SuggestionsPage() {
             </div>
           </section>
         </div>
+        <ConfirmationDialog
+          isOpen={personToConnect !== null}
+          title="Send connection request?"
+          description={
+            personToConnect
+              ? `Send a connection request to ${personToConnect.firstName} ${personToConnect.lastName}?`
+              : ""
+          }
+          confirmLabel="Send request"
+          isPending={isSendingRequest}
+          onConfirm={confirmConnect}
+          onCancel={() => setPersonToConnect(null)}
+        />
       </main>
     </ProtectedRoute>
   );

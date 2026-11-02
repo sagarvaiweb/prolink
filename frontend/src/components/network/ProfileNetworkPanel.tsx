@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import {
   Check,
@@ -9,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 import { toast } from "sonner";
+import ConfirmationDialog from "@/components/ui/ConfirmationDialog";
 import { useAppSelector } from "@/redux/hooks";
 import {
   useAcceptConnectionRequestMutation,
@@ -46,6 +48,9 @@ interface Props {
 }
 
 export default function ProfileNetworkPanel({ userId }: Props) {
+  const [connectionToRemove, setConnectionToRemove] = useState<string | null>(
+    null
+  );
   const currentUser = useAppSelector((state) => state.auth.user);
   const isOwnProfile = currentUser?._id === userId;
   const followersQuery = useGetFollowersQuery({
@@ -98,15 +103,13 @@ export default function ProfileNetworkPanel({ userId }: Props) {
     }
   };
 
-  const handleRemoveConnection = () => {
-    const connectionId = relationship?.connectionId;
-    if (!connectionId) return;
-    if (!window.confirm("Remove this connection?")) return;
-
-    void runAction(
-      () => removeConnection(connectionId).unwrap(),
+  const handleRemoveConnection = async () => {
+    if (!connectionToRemove) return;
+    await runAction(
+      () => removeConnection(connectionToRemove).unwrap(),
       "Connection removed."
     );
+    setConnectionToRemove(null);
   };
 
   const handleConnectionAction = (
@@ -202,7 +205,9 @@ export default function ProfileNetworkPanel({ userId }: Props) {
           <button
             type="button"
             disabled={isActionPending}
-            onClick={handleRemoveConnection}
+            onClick={() =>
+              setConnectionToRemove(relationship.connectionId ?? null)
+            }
             className={`${buttonClass} border border-slate-200 text-slate-700 hover:border-red-200 hover:bg-red-50 hover:text-red-700`}
           >
             <UserRoundMinus size={16} />
@@ -305,6 +310,16 @@ export default function ProfileNetworkPanel({ userId }: Props) {
           ) : null}
         </div>
       )}
+      <ConfirmationDialog
+        isOpen={connectionToRemove !== null}
+        title="Remove connection?"
+        description="This person will be removed from your network. You can send them a new connection request later."
+        confirmLabel="Remove connection"
+        isDestructive
+        isPending={isRemovingConnection}
+        onConfirm={handleRemoveConnection}
+        onCancel={() => setConnectionToRemove(null)}
+      />
     </section>
   );
 }
