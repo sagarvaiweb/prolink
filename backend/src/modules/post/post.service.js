@@ -1,5 +1,7 @@
 import { Connection } from "../../models/Connection.model.js";
+import { Comment } from "../../models/Comment.model.js";
 import { Follow } from "../../models/Follow.model.js";
+import { Like } from "../../models/Like.model.js";
 import { Post } from "../../models/Post.model.js";
 import { User } from "../../models/User.model.js";
 import ApiError from "../../utils/ApiError.js";
@@ -9,6 +11,26 @@ import {
 } from "../../utils/postMedia.util.js";
 
 const AUTHOR_FIELDS = "firstName lastName username avatar role";
+
+const attachLikedState = async (posts, userId) => {
+  if (posts.length === 0) return posts;
+
+  const likedPostIds = new Set(
+    (
+      await Like.find({
+        user: userId,
+        post: { $in: posts.map((post) => post._id) },
+      })
+        .select("post")
+        .lean()
+    ).map((like) => String(like.post))
+  );
+
+  return posts.map((post) => ({
+    ...post,
+    isLiked: likedPostIds.has(String(post._id)),
+  }));
+};
 
 const ensureActiveUser = (user) => {
   if (user.accountStatus !== "active") {
@@ -134,6 +156,12 @@ const getPostPage = async (filter, pagination) => {
   };
 };
 
+const getPostPageForUser = async (filter, pagination, userId) => {
+  const result = await getPostPage(filter, pagination);
+  result.posts = await attachLikedState(result.posts, userId);
+  return result;
+};
+
 const getPostOrFail = async (postId) => {
   const post = await Post.findById(postId).populate("author", AUTHOR_FIELDS);
   if (!post || !post.author) {
@@ -172,7 +200,7 @@ export const getFeed = async (user, pagination) => {
     ...new Set([String(user._id), ...connectedIds]),
   ];
 
-  return getPostPage(
+  return getPostPageForUser(
     {
       author: { $in: audienceIds },
       $or: [
@@ -180,7 +208,8 @@ export const getFeed = async (user, pagination) => {
         { author: { $in: connectionVisibilityIds } },
       ],
     },
-    pagination
+    pagination,
+    user._id
   );
 };
 
@@ -204,7 +233,13 @@ export const getPostById = async (viewer, postId) => {
     throw new ApiError(404, "Post not found.");
   }
 
-  return post;
+  const likedPost = await Like.findOne({
+    post: post._id,
+    user: viewer._id,
+  })
+    .select("_id")
+    .lean();
+  return { ...post.toObject(), isLiked: Boolean(likedPost) };
 };
 
 export const getPostsByUser = async (viewer, authorId, pagination) => {
@@ -221,7 +256,7 @@ export const getPostsByUser = async (viewer, authorId, pagination) => {
     filter.visibility = "public";
   }
 
-  return getPostPage(filter, pagination);
+  return getPostPageForUser(filter, pagination, viewer._id);
 };
 
 export const updatePost = async (user, postId, updates, files = []) => {
@@ -276,5 +311,9 @@ export const deletePost = async (user, postId) => {
 
   const mediaUrls = post.mediaUrls;
   await post.deleteOne();
-  await deletePostMedia(mediaUrls);
+  await Promise.all([
+    Like.deleteMany({ post: post._id }),
+    Comment.deleteMany({ post: post._id }),
+    deletePostMedia(mediaUrls),
+  ]);
 };

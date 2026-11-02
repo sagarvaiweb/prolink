@@ -17,6 +17,24 @@ export const postAuthorParamsSchema = Joi.object({
   userId: objectId,
 });
 
+export const commentIdParamsSchema = Joi.object({
+  commentId: objectId,
+});
+
+export const postCommentParamsSchema = Joi.object({
+  postId: objectId,
+  commentId: objectId,
+});
+
+export const createCommentSchema = Joi.object({
+  content: Joi.string().trim().min(1).max(1000).required(),
+  parentComment: Joi.string().hex().length(24).allow(null),
+});
+
+export const updateCommentSchema = Joi.object({
+  content: Joi.string().trim().min(1).max(1000).required(),
+});
+
 export const createPostSchema = Joi.object({
   content: Joi.string().trim().max(3000).allow("").default(""),
   visibility: visibility.default("public"),
