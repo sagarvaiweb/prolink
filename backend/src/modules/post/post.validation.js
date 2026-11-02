@@ -26,6 +26,26 @@ export const postCommentParamsSchema = Joi.object({
   commentId: objectId,
 });
 
+export const postReportParamsSchema = Joi.object({
+  reportId: objectId,
+});
+
+export const sharePostSchema = Joi.object({
+  content: Joi.string().trim().max(3000).allow("").default(""),
+  visibility: visibility.default("public"),
+});
+
+export const reportPostSchema = Joi.object({
+  reason: Joi.string()
+    .valid("spam", "harassment", "misinformation", "inappropriate", "other")
+    .required(),
+  details: Joi.string().trim().max(500).allow("").default(""),
+});
+
+export const reviewPostReportSchema = Joi.object({
+  status: Joi.string().valid("dismissed", "post_removed").required(),
+});
+
 export const createCommentSchema = Joi.object({
   content: Joi.string().trim().min(1).max(1000).required(),
   parentComment: Joi.string().hex().length(24).allow(null),

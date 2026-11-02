@@ -14,9 +14,13 @@ const postSchema = new Schema(
       default: "",
       validate: {
         validator(value) {
-          return Boolean(value?.trim()) || this.mediaUrls.length > 0;
+          return (
+            Boolean(value?.trim()) ||
+            this.mediaUrls.length > 0 ||
+            Boolean(this.originalPost)
+          );
         },
-        message: "A post must include text or at least one image.",
+        message: "A post must include text, an image, or an original post.",
       },
     },
     mediaUrls: {

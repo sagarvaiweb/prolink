@@ -4,6 +4,7 @@ import validateParams from "../../middlewares/validateParams.middleware.js";
 import validateQuery from "../../middlewares/validateQuery.middleware.js";
 import validateRequest from "../../middlewares/validate.middleware.js";
 import { uploadPostMedia } from "../../middlewares/upload.middleware.js";
+import authorizeRole from "../../middlewares/authorizeRoles.middleware.js";
 import {
   addComment,
   deleteComment,
@@ -13,6 +14,17 @@ import {
   unlikePost,
   updateComment,
 } from "./engagement.controller.js";
+import {
+  getSavedPosts,
+  savePost,
+  sharePost,
+  unsavePost,
+} from "./sharing.controller.js";
+import {
+  getPostReports,
+  reportPost,
+  reviewPostReport,
+} from "./report.controller.js";
 import {
   createPost,
   deletePost,
@@ -28,6 +40,10 @@ import {
   postCommentParamsSchema,
   postIdParamsSchema,
   postListQuerySchema,
+  postReportParamsSchema,
+  reportPostSchema,
+  reviewPostReportSchema,
+  sharePostSchema,
   updateCommentSchema,
   validateCreatePost,
   validateUpdatePost,
@@ -36,6 +52,27 @@ import { rateLimiter } from "../../middlewares/rateLimiter.middleware.js";
 
 const router = Router();
 
+router.get(
+  "/saved",
+  authenticateUser,
+  validateQuery(postListQuerySchema),
+  getSavedPosts
+);
+router.get(
+  "/reports",
+  authenticateUser,
+  authorizeRole("admin"),
+  validateQuery(postListQuerySchema),
+  getPostReports
+);
+router.patch(
+  "/reports/:reportId",
+  authenticateUser,
+  authorizeRole("admin"),
+  validateParams(postReportParamsSchema),
+  validateRequest(reviewPostReportSchema),
+  reviewPostReport
+);
 router.post(
   "/",
   authenticateUser,
@@ -56,6 +93,33 @@ router.get(
   validateParams(postAuthorParamsSchema),
   validateQuery(postListQuerySchema),
   getPostsByUser
+);
+router.post(
+  "/:postId/share",
+  authenticateUser,
+  validateParams(postIdParamsSchema),
+  validateRequest(sharePostSchema),
+  sharePost
+);
+router.post(
+  "/:postId/save",
+  authenticateUser,
+  validateParams(postIdParamsSchema),
+  savePost
+);
+router.delete(
+  "/:postId/save",
+  authenticateUser,
+  validateParams(postIdParamsSchema),
+  unsavePost
+);
+router.post(
+  "/:postId/report",
+  authenticateUser,
+  rateLimiter,
+  validateParams(postIdParamsSchema),
+  validateRequest(reportPostSchema),
+  reportPost
 );
 router.post(
   "/:postId/like",

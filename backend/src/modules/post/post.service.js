@@ -3,6 +3,7 @@ import { Comment } from "../../models/Comment.model.js";
 import { Follow } from "../../models/Follow.model.js";
 import { Like } from "../../models/Like.model.js";
 import { Post } from "../../models/Post.model.js";
+import { SavedPost } from "../../models/SavedPost.model.js";
 import { User } from "../../models/User.model.js";
 import ApiError from "../../utils/ApiError.js";
 import {
@@ -15,20 +16,27 @@ const AUTHOR_FIELDS = "firstName lastName username avatar role";
 const attachLikedState = async (posts, userId) => {
   if (posts.length === 0) return posts;
 
-  const likedPostIds = new Set(
-    (
-      await Like.find({
+  const [likes, savedPosts] = await Promise.all([
+    Like.find({
         user: userId,
         post: { $in: posts.map((post) => post._id) },
       })
         .select("post")
-        .lean()
-    ).map((like) => String(like.post))
-  );
+        .lean(),
+    SavedPost.find({
+      user: userId,
+      post: { $in: posts.map((post) => post._id) },
+    })
+      .select("post")
+      .lean(),
+  ]);
+  const likedPostIds = new Set(likes.map((like) => String(like.post)));
+  const savedPostIds = new Set(savedPosts.map((saved) => String(saved.post)));
 
   return posts.map((post) => ({
     ...post,
     isLiked: likedPostIds.has(String(post._id)),
+    isSaved: savedPostIds.has(String(post._id)),
   }));
 };
 
@@ -138,6 +146,10 @@ const getPostPage = async (filter, pagination) => {
   const [posts, total] = await Promise.all([
     Post.find(filter)
       .populate("author", AUTHOR_FIELDS)
+      .populate({
+        path: "originalPost",
+        populate: { path: "author", select: AUTHOR_FIELDS },
+      })
       .sort({ createdAt: -1, _id: -1 })
       .skip(skip)
       .limit(limit)
@@ -163,7 +175,13 @@ const getPostPageForUser = async (filter, pagination, userId) => {
 };
 
 const getPostOrFail = async (postId) => {
-  const post = await Post.findById(postId).populate("author", AUTHOR_FIELDS);
+  const post = await Post.findById(postId).populate([
+    { path: "author", select: AUTHOR_FIELDS },
+    {
+      path: "originalPost",
+      populate: { path: "author", select: AUTHOR_FIELDS },
+    },
+  ]);
   if (!post || !post.author) {
     throw new ApiError(404, "Post not found.");
   }
@@ -190,7 +208,14 @@ export const createPost = async (author, postData, files = []) => {
     throw normalizeWriteError(error);
   }
 
-  return post.populate("author", AUTHOR_FIELDS);
+  await post.populate([
+    { path: "author", select: AUTHOR_FIELDS },
+    {
+      path: "originalPost",
+      populate: { path: "author", select: AUTHOR_FIELDS },
+    },
+  ]);
+  return { ...post.toObject(), isLiked: false, isSaved: false };
 };
 
 export const getFeed = async (user, pagination) => {
@@ -239,7 +264,17 @@ export const getPostById = async (viewer, postId) => {
   })
     .select("_id")
     .lean();
-  return { ...post.toObject(), isLiked: Boolean(likedPost) };
+  const savedPost = await SavedPost.findOne({
+    post: post._id,
+    user: viewer._id,
+  })
+    .select("_id")
+    .lean();
+  return {
+    ...post.toObject(),
+    isLiked: Boolean(likedPost),
+    isSaved: Boolean(savedPost),
+  };
 };
 
 export const getPostsByUser = async (viewer, authorId, pagination) => {
@@ -295,7 +330,42 @@ export const updatePost = async (user, postId, updates, files = []) => {
   if (files.length > 0 || updates.clearMedia) {
     await deletePostMedia(previousMediaUrls);
   }
-  return post.populate("author", AUTHOR_FIELDS);
+  return post.populate([
+    { path: "author", select: AUTHOR_FIELDS },
+    {
+      path: "originalPost",
+      populate: { path: "author", select: AUTHOR_FIELDS },
+    },
+  ]);
+};
+
+const removePost = async (post) => {
+  if (post.originalPost) {
+    const sourceUpdate = await Post.updateOne(
+      { _id: post.originalPost, shareCount: { $gt: 0 } },
+      { $inc: { shareCount: -1 } }
+    );
+    if (
+      sourceUpdate.matchedCount !== 1 &&
+      (await Post.exists({ _id: post.originalPost }))
+    ) {
+      throw new ApiError(500, "Could not update the original post share count.");
+    }
+  }
+
+  const reposts = await Post.find({ originalPost: post._id })
+    .select("_id")
+    .lean();
+  const relatedPostIds = [post._id, ...reposts.map((repost) => repost._id)];
+  const mediaUrls = post.mediaUrls;
+  await post.deleteOne();
+  await Promise.all([
+    Post.deleteMany({ _id: { $in: relatedPostIds.slice(1) } }),
+    Like.deleteMany({ post: { $in: relatedPostIds } }),
+    Comment.deleteMany({ post: { $in: relatedPostIds } }),
+    SavedPost.deleteMany({ post: { $in: relatedPostIds } }),
+    deletePostMedia(mediaUrls),
+  ]);
 };
 
 export const deletePost = async (user, postId) => {
@@ -309,11 +379,12 @@ export const deletePost = async (user, postId) => {
     throw new ApiError(403, "You can only modify your own posts.");
   }
 
-  const mediaUrls = post.mediaUrls;
-  await post.deleteOne();
-  await Promise.all([
-    Like.deleteMany({ post: post._id }),
-    Comment.deleteMany({ post: post._id }),
-    deletePostMedia(mediaUrls),
-  ]);
+  await removePost(post);
+};
+
+export const removePostByAdmin = async (postId) => {
+  const post = await Post.findById(postId);
+  if (!post) return false;
+  await removePost(post);
+  return true;
 };
