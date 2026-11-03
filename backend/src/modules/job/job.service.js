@@ -1,5 +1,6 @@
 import { Job } from "../../models/Job.model.js";
 import { SavedJob } from "../../models/SavedJob.model.js";
+import { Application } from "../../models/Application.model.js";
 import { User } from "../../models/User.model.js";
 import ApiError from "../../utils/ApiError.js";
 
@@ -136,7 +137,11 @@ export const deleteJob = async (user, jobId) => {
   ensureActive(user);
   const job = await getJobOrFail(jobId);
   ensureOwner(job, user._id);
-  await Promise.all([job.deleteOne(), SavedJob.deleteMany({ job: job._id })]);
+  await Promise.all([
+    job.deleteOne(),
+    SavedJob.deleteMany({ job: job._id }),
+    Application.deleteMany({ job: job._id }),
+  ]);
 };
 
 export const saveJob = async (user, jobId) => {
