@@ -10,6 +10,7 @@ import {
   ChevronRight,
   LoaderCircle,
   Network,
+  Bell,
   RefreshCw,
   ShieldCheck,
   UsersRound,
@@ -155,6 +156,22 @@ export default function FeedPage() {
             <BriefcaseBusiness size={16} />
             Find jobs
           </Link>
+          <Link
+            href="/notifications"
+            className="mb-6 ml-5 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-primary-800"
+          >
+            <Bell size={16} />
+            Notifications
+          </Link>
+          {(user?.role === "student" || user?.role === "professional") && (
+            <Link
+              href="/applications"
+              className="mb-6 ml-5 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-primary-800"
+            >
+              <BriefcaseBusiness size={16} />
+              My applications
+            </Link>
+          )}
           {user?.role === "recruiter" && (
             <Link
               href="/recruiter/jobs"

@@ -66,6 +66,15 @@ export default function RecruiterJobCard({
             <Edit3 size={15} />
             Edit
           </Link>
+          {job.moderationStatus === "approved" && (
+            <Link
+              href={`/recruiter/jobs/${job._id}/applicants`}
+              className="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-primary-100 bg-primary-50 px-3 py-2 text-sm font-semibold text-primary-800 transition hover:bg-primary-100"
+            >
+              <UsersRound size={15} />
+              Applicants
+            </Link>
+          )}
           {job.status === "open" && (
             <button
               type="button"

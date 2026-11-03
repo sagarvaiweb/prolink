@@ -9,6 +9,7 @@ import {
   BriefcaseBusiness,
   CalendarDays,
   CheckCircle2,
+  FileText,
   MapPin,
   Wifi,
 } from "lucide-react";
@@ -19,6 +20,10 @@ import {
   useSaveJobMutation,
   useUnsaveJobMutation,
 } from "@/redux/features/jobs/jobsApi";
+import { useApplyToJobMutation } from "@/redux/features/jobs/applicationsApi";
+import { useGetMyProfileQuery } from "@/redux/features/profile/profileApi";
+import { useAppSelector } from "@/redux/hooks";
+import { getJobErrorMessage } from "@/components/jobs/jobErrors";
 import type { ExperienceLevel, JobType } from "@/types/job.types";
 
 const experienceLabels: Record<ExperienceLevel, string> = {
@@ -43,10 +48,25 @@ export default function JobDetailPage() {
   const params = useParams<{ jobId: string }>();
   const jobId = params.jobId;
   const { currentData, isLoading, isError, refetch } = useGetJobByIdQuery(jobId);
+  const role = useAppSelector((state) => state.auth.user?.role);
+  const { currentData: profileData } = useGetMyProfileQuery(undefined, { skip: role !== "student" && role !== "professional" });
+  const [applyToJob, { isLoading: isApplying }] = useApplyToJobMutation();
   const [saveJob, { isLoading: isSaving }] = useSaveJobMutation();
   const [unsaveJob, { isLoading: isUnsaving }] = useUnsaveJobMutation();
   const job = currentData?.data;
   const canSave = job?.moderationStatus === "approved";
+  const profileHasResume = Boolean(profileData?.data.resumeUrl);
+  const canApply = canSave && job?.status === "open" && (role === "student" || role === "professional");
+
+  const handleApply = async () => {
+    if (!job) return;
+    try {
+      await applyToJob(job._id).unwrap();
+      toast.success("Application submitted successfully.");
+    } catch (error) {
+      toast.error(getJobErrorMessage(error));
+    }
+  };
 
   const handleSave = async () => {
     if (!job) return;
@@ -228,6 +248,20 @@ export default function JobDetailPage() {
                     <p className="rounded-xl border border-slate-200 bg-slate-100 px-4 py-3 text-sm font-medium text-slate-600">
                       This position is currently closed.
                     </p>
+                  )}
+                  {canApply && (
+                    <section className="rounded-2xl border border-primary-100 bg-primary-50 p-5 shadow-sm">
+                      <div className="flex items-center gap-2 font-bold text-slate-900"><FileText size={18} className="text-primary-700" /> Ready to apply?</div>
+                      <p className="mt-2 text-sm leading-6 text-slate-600">{profileHasResume ? "Your profile resume will be included with your application." : "Add a resume to your profile before applying to this role."}</p>
+                      {profileHasResume ? (
+                        <button type="button" onClick={() => void handleApply()} disabled={isApplying} className="mt-4 w-full rounded-xl bg-primary-800 px-4 py-3 text-sm font-semibold text-white transition hover:bg-primary-900 disabled:cursor-wait disabled:opacity-60">
+                          {isApplying ? "Submitting…" : "Apply for this job"}
+                        </button>
+                      ) : (
+                        <Link href="/profile" className="mt-4 inline-flex w-full justify-center rounded-xl bg-primary-800 px-4 py-3 text-sm font-semibold text-white transition hover:bg-primary-900">Add resume to profile</Link>
+                      )}
+                      <Link href="/applications" className="mt-3 inline-flex w-full justify-center text-sm font-semibold text-primary-800 hover:text-primary-950">View my applications</Link>
+                    </section>
                   )}
                 </aside>
               </div>
