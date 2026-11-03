@@ -14,6 +14,7 @@ import {
   getMyJobs,
   getSavedJobs,
   reviewJob,
+  removeJobByAdmin,
   saveJob,
   unsaveJob,
   updateJob,
@@ -35,6 +36,12 @@ import { applyToJob, getApplicantsForJob } from "./application.controller.js";
 const router = Router();
 
 router.use(authenticateUser);
+router.delete(
+  "/admin/:jobId",
+  authorizeRole("admin"),
+  validateParams(jobIdParamsSchema),
+  removeJobByAdmin
+);
 router.get("/mine", authorizeRole("recruiter"), validateJobQuery, getMyJobs);
 router.get(
   "/moderation/pending",

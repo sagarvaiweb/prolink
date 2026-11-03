@@ -85,3 +85,10 @@ export const reviewJob = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, job, "Job listing review completed successfully."));
 });
+
+export const removeJobByAdmin = asyncHandler(async (req, res) => {
+  await jobService.removeJobByAdmin(req.user, req.params.jobId);
+  res
+    .status(200)
+    .json(new ApiResponse(200, null, "Job listing removed successfully."));
+});

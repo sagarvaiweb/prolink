@@ -2,6 +2,11 @@ import { Application } from "../../models/Application.model.js";
 import { Job } from "../../models/Job.model.js";
 import { Profile } from "../../models/Profile.model.js";
 import ApiError from "../../utils/ApiError.js";
+import {
+  notifyApplicationStatus,
+  notifyNewApplication,
+} from "../notification/notification.service.js";
+import { getResumeMatchScore } from "./resumeMatch.service.js";
 
 const APPLICANT_FIELDS = "firstName lastName username avatar role";
 
@@ -35,24 +40,6 @@ const getOpenJob = async (jobId) => {
   return job;
 };
 
-const calculateSkillMatch = (profileSkills = [], requiredSkills = []) => {
-  const applicantSkills = new Set(
-    profileSkills.map((skill) => skill.trim().toLocaleLowerCase())
-  );
-  const matchedSkills = requiredSkills.filter((skill) =>
-    applicantSkills.has(skill.trim().toLocaleLowerCase())
-  );
-
-  return {
-    matchScore: requiredSkills.length
-      ? Math.round((matchedSkills.length / requiredSkills.length) * 100)
-      : 0,
-    missingSkills: requiredSkills.filter(
-      (skill) => !applicantSkills.has(skill.trim().toLocaleLowerCase())
-    ),
-  };
-};
-
 const normalizeDuplicateApplication = (error) => {
   if (error?.code === 11000) {
     throw new ApiError(409, "You have already applied to this job.");
@@ -72,7 +59,7 @@ export const applyToJob = async (applicant, jobId) => {
     throw new ApiError(400, "Please upload a resume before applying.");
   }
 
-  const match = calculateSkillMatch(profile.skills, job.requiredSkills);
+  const match = await getResumeMatchScore({ profile, job });
   let application;
 
   try {
@@ -99,6 +86,13 @@ export const applyToJob = async (applicant, jobId) => {
     await application.deleteOne();
     throw new ApiError(400, "This job is no longer accepting applications.");
   }
+
+  await notifyNewApplication({
+    applicant,
+    recruiterId: job.postedBy,
+    job,
+    application,
+  });
 
   return application;
 };
@@ -201,7 +195,9 @@ export const updateApplicationStatus = async (
   const application = await Application.findById(applicationId);
   if (!application) throw new ApiError(404, "Application not found.");
 
-  const job = await Job.findById(application.job).select("postedBy").lean();
+  const job = await Job.findById(application.job)
+    .select("postedBy title")
+    .lean();
   if (!job) throw new ApiError(404, "Job listing not found.");
   if (String(job.postedBy) !== String(recruiter._id)) {
     throw new ApiError(403, "You can only manage applicants for your own jobs.");
@@ -220,6 +216,13 @@ export const updateApplicationStatus = async (
   if (!updatedApplication) {
     throw new ApiError(409, "This application has already been updated.");
   }
+
+  await notifyApplicationStatus({
+    recruiter,
+    applicantId: application.applicant,
+    application: updatedApplication,
+    job,
+  });
 
   return updatedApplication;
 };

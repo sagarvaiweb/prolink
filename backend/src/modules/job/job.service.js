@@ -3,6 +3,7 @@ import { SavedJob } from "../../models/SavedJob.model.js";
 import { Application } from "../../models/Application.model.js";
 import { User } from "../../models/User.model.js";
 import ApiError from "../../utils/ApiError.js";
+import { notifyJobRemoved } from "../notification/notification.service.js";
 
 const JOB_POPULATE = {
   path: "postedBy",
@@ -79,7 +80,12 @@ export const getJobs = async (user, query) => {
   const { page, limit, skip } = getPagination(query);
   const filter = buildJobFilter(query);
   const [jobs, total, saved] = await Promise.all([
-    Job.find(filter).populate(JOB_POPULATE).sort({ createdAt: -1, _id: -1 }).skip(skip).limit(limit).lean(),
+    Job.find(filter)
+      .populate(JOB_POPULATE)
+      .sort({ createdAt: -1, _id: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
     Job.countDocuments(filter),
     SavedJob.find({ user: user._id }).select("job").lean(),
   ]);
@@ -142,6 +148,29 @@ export const deleteJob = async (user, jobId) => {
     SavedJob.deleteMany({ job: job._id }),
     Application.deleteMany({ job: job._id }),
   ]);
+};
+
+export const removeJobByAdmin = async (admin, jobId) => {
+  ensureActive(admin);
+
+  const job = await Job.findById(jobId).select("_id title postedBy").lean();
+  if (!job) throw new ApiError(404, "Job listing not found.");
+
+  const applications = await Application.find({ job: job._id })
+    .select("applicant")
+    .lean();
+
+  await Promise.all([
+    Job.deleteOne({ _id: job._id }),
+    SavedJob.deleteMany({ job: job._id }),
+    Application.deleteMany({ job: job._id }),
+  ]);
+
+  await notifyJobRemoved({
+    admin,
+    job,
+    applicantIds: applications.map(({ applicant }) => applicant),
+  });
 };
 
 export const saveJob = async (user, jobId) => {
@@ -207,7 +236,12 @@ export const getJobsForModeration = async (pagination) => {
   const { page, limit, skip } = getPagination(pagination);
   const filter = { moderationStatus: "pending" };
   const [jobs, total] = await Promise.all([
-    Job.find(filter).populate(JOB_POPULATE).sort({ createdAt: 1, _id: 1 }).skip(skip).limit(limit).lean(),
+    Job.find(filter)
+      .populate(JOB_POPULATE)
+      .sort({ createdAt: 1, _id: 1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
     Job.countDocuments(filter),
   ]);
   return { jobs, pagination: { total, page, limit, totalPages: Math.ceil(total / limit) } };
@@ -217,7 +251,9 @@ export const reviewJob = async (admin, jobId, { decision, note }) => {
   ensureActive(admin);
   const job = await Job.findById(jobId);
   if (!job) throw new ApiError(404, "Job listing not found.");
-  if (job.moderationStatus !== "pending") throw new ApiError(409, "This job has already been reviewed.");
+  if (job.moderationStatus !== "pending") {
+    throw new ApiError(409, "This job has already been reviewed.");
+  }
   job.moderationStatus = decision === "approve" ? "approved" : "rejected";
   job.moderationNote = decision === "reject" ? note : null;
   await job.save();
