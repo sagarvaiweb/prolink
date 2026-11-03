@@ -155,6 +155,24 @@ export default function FeedPage() {
             <BriefcaseBusiness size={16} />
             Find jobs
           </Link>
+          {user?.role === "recruiter" && (
+            <Link
+              href="/recruiter/jobs"
+              className="mb-6 ml-5 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-primary-800"
+            >
+              <BriefcaseBusiness size={16} />
+              Manage jobs
+            </Link>
+          )}
+          {user?.role === "admin" && (
+            <Link
+              href="/admin/jobs"
+              className="mb-6 ml-5 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-primary-800"
+            >
+              <ShieldCheck size={16} />
+              Moderate jobs
+            </Link>
+          )}
           {user?.role === "admin" && (
             <Link
               href="/admin/post-reports"

@@ -30,7 +30,7 @@ export interface Job {
   applicantCount: number;
   createdAt: string;
   updatedAt: string;
-  isSaved: boolean;
+  isSaved?: boolean;
 }
 
 export interface JobPagination {
@@ -57,6 +57,29 @@ export interface JobListParams {
   status?: JobStatus;
 }
 
+export interface JobPayload {
+  title: string;
+  description: string;
+  requiredSkills: string[];
+  experienceLevel: ExperienceLevel;
+  jobType: JobType;
+  location: string;
+  isRemote: boolean;
+  salaryRange: string | null;
+}
+
+export interface UpdateJobPayload {
+  jobId: string;
+  data: Partial<JobPayload>;
+}
+
+export interface ReviewJobPayload {
+  jobId: string;
+  decision: "approve" | "reject";
+  note?: string;
+}
+
 export type JobPageResponse = ApiResponse<JobPage>;
 export type JobResponse = ApiResponse<Job>;
+export type JobMutationResponse = ApiResponse<Job>;
 export type JobActionResponse = ApiResponse<null>;
