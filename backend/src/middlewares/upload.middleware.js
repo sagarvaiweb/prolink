@@ -14,11 +14,14 @@ const createStorage = (folder, allowedFormats , resourceType = "image") =>
     },
   });
 
-const fileFilter = (allowedMimeTypes) => (req, file, cb) => {
+const fileFilter = (
+  allowedMimeTypes,
+  errorMessage = "Only PDF/JPG/PNG files are allowed."
+) => (req, file, cb) => {
   if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new ApiError(400, "Only PDF/JPG/PNG files are allowed."), false);
+    cb(new ApiError(400, errorMessage), false);
   }
 };
 
@@ -27,6 +30,16 @@ export const uploadPhoto = multer({
   storage: createStorage("photos", ["jpg", "jpeg", "png"] , "image"),
   limits: { fileSize: 2 * 1024 * 1024 },
   fileFilter: fileFilter(["image/jpeg", "image/png"]),
+});
+
+// Post images, JPG/PNG, max 5MB per image
+export const uploadPostMedia = multer({
+  storage: createStorage("posts", ["jpg", "jpeg", "png"], "image"),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: fileFilter(
+    ["image/jpeg", "image/png"],
+    "Only JPG and PNG images are allowed."
+  ),
 });
 
 // Resume uploads , PDF only, max 5MB

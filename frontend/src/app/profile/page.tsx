@@ -14,6 +14,7 @@ import EducationForm from "@/components/profile/EducationForm";
 import { Experience , Education } from "@/types/profile.types";
 import ResumeUpload from "@/components/profile/ResumeUpload";
 import ProfileNetworkPanel from "@/components/network/ProfileNetworkPanel";
+import ProfilePostsSection from "@/components/posts/ProfilePostsSection";
 
 
 export default function ProfilePage() {
@@ -59,6 +60,10 @@ export default function ProfilePage() {
             <>
               <ProfileHeader profile={data.data} user={user} onEdit={() => setIsEditOpen(true)} />
               <ProfileNetworkPanel userId={user._id} />
+              <ProfilePostsSection
+                userId={user._id}
+                currentUserId={user._id}
+              />
               <ExperienceList
                 experience={data.data.experience}
                 onAdd={openAddExperience}
