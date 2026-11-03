@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ArrowLeft,
   BookmarkCheck,
+  BriefcaseBusiness,
   ChevronLeft,
   ChevronRight,
   LoaderCircle,
@@ -146,6 +147,13 @@ export default function FeedPage() {
           >
             <BookmarkCheck size={16} />
             Saved posts
+          </Link>
+          <Link
+            href="/jobs"
+            className="mb-6 ml-5 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-primary-800"
+          >
+            <BriefcaseBusiness size={16} />
+            Find jobs
           </Link>
           {user?.role === "admin" && (
             <Link

@@ -4,6 +4,7 @@ import { authApi } from "./features/auth/authApi";
 import { profileApi } from "./features/profile/profileApi";
 import { networkApi } from "./features/network/networkApi";
 import { postsApi } from "./features/posts/postsApi";
+import { jobsApi } from "./features/jobs/jobsApi";
 
 export const store = configureStore({
   reducer: {
@@ -12,13 +13,15 @@ export const store = configureStore({
     [profileApi.reducerPath]: profileApi.reducer,
     [networkApi.reducerPath]: networkApi.reducer,
     [postsApi.reducerPath]: postsApi.reducer,
+    [jobsApi.reducerPath]: jobsApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
       authApi.middleware,
       profileApi.middleware,
       networkApi.middleware,
-      postsApi.middleware
+      postsApi.middleware,
+      jobsApi.middleware
     ),
 });
 
