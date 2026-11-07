@@ -93,6 +93,22 @@ export const notifyConnectionAccepted = async ({ accepter, requesterId, connecti
   ]);
 };
 
+export const notifyNewFollower = async ({ follower, recipientId }) => {
+  const followerName = [follower.firstName, follower.lastName]
+    .filter(Boolean)
+    .join(" ");
+
+  await createNotifications([
+    {
+      recipient: recipientId,
+      actor: follower._id,
+      type: "new_follower",
+      title: "New follower",
+      message: `${followerName || "A user"} started following you.`,
+    },
+  ]);
+};
+
 export const notifyPostLike = async ({ actor, post }) => {
   const recipientId = post.author?._id ?? post.author;
   if (String(recipientId) === String(actor._id)) return;

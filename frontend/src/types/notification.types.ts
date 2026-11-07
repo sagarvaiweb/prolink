@@ -4,6 +4,7 @@ import type { JobPagination } from "./job.types";
 export type NotificationType =
   | "connection_request"
   | "connection_accepted"
+  | "new_follower"
   | "post_like"
   | "post_comment"
   | "job_application_received"

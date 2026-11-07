@@ -45,6 +45,10 @@ export function getNotificationDestination(
     case "connection_request":
     case "connection_accepted":
       return "/network";
+    case "new_follower":
+      return notification.actor?._id
+        ? `/profile/${notification.actor._id}`
+        : null;
     case "post_like":
     case "post_comment":
       return notification.relatedPostId

@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { Follow } from "../../models/Follow.model.js";
 import { User } from "../../models/User.model.js";
 import ApiError from "../../utils/ApiError.js";
+import { notifyNewFollower } from "../notification/notification.service.js";
 
 const ensureActiveUser = (user) => {
   if (user.accountStatus !== "active") {
@@ -45,10 +46,12 @@ export const followUser = async (follower, followingId) => {
   const target = await getActiveUser(followingId);
 
   try {
-    return await Follow.create({
+    const follow = await Follow.create({
       follower: follower._id,
       following: target._id,
     });
+    await notifyNewFollower({ follower, recipientId: target._id });
+    return follow;
   } catch (error) {
     if (error?.code === 11000) {
       throw new ApiError(409, "You are already following this user");

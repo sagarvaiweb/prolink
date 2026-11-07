@@ -17,6 +17,7 @@ const notificationSchema = new Schema(
       enum: [
         "connection_request",
         "connection_accepted",
+        "new_follower",
         "post_like",
         "post_comment",
         "job_application_received",
