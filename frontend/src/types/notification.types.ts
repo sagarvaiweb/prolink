@@ -1,7 +1,14 @@
 import type { ApiResponse } from "./auth.types";
 import type { JobPagination } from "./job.types";
 
-export type NotificationType = "job_application_received" | "application_status_updated" | "job_listing_removed";
+export type NotificationType =
+  | "connection_request"
+  | "connection_accepted"
+  | "post_like"
+  | "post_comment"
+  | "job_application_received"
+  | "application_status_updated"
+  | "job_listing_removed";
 
 export interface NotificationActor {
   _id: string;
@@ -19,6 +26,9 @@ export interface AppNotification {
   message: string;
   relatedJobId?: string | null;
   relatedApplicationId?: string | null;
+  relatedConnectionId?: string | null;
+  relatedPostId?: string | null;
+  relatedCommentId?: string | null;
   jobTitle?: string | null;
   isRead: boolean;
   readAt?: string | null;
@@ -33,3 +43,6 @@ export interface NotificationPage {
 
 export type NotificationPageResponse = ApiResponse<NotificationPage>;
 export type NotificationActionResponse = ApiResponse<null>;
+export type UnreadNotificationCountResponse = ApiResponse<{
+  unreadCount: number;
+}>;
