@@ -9,6 +9,9 @@ import profileRoutes from "./modules/profile/profile.routes.js" ;
 import connectionRoutes from "./modules/connection/connection.routes.js";
 import followRoutes from "./modules/follow/follow.routes.js";
 import postRoutes from "./modules/post/post.routes.js";
+import jobRoutes from "./modules/job/job.routes.js";
+import applicationRoutes from "./modules/job/application.routes.js";
+import notificationRoutes from "./modules/notification/notification.routes.js";
 
 const app = express() ;
 
@@ -32,6 +35,9 @@ app.use("/api/profiles", profileRoutes);
 app.use("/api/connections", connectionRoutes);
 app.use("/api/follow", followRoutes);
 app.use("/api/posts", postRoutes);
+app.use("/api/jobs", jobRoutes);
+app.use("/api/applications", applicationRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // error handler middleware i.e always remain at the last of all middlewares
 app.use(errorHandler) ;
