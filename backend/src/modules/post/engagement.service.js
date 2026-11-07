@@ -2,6 +2,7 @@ import { Comment } from "../../models/Comment.model.js";
 import { Like } from "../../models/Like.model.js";
 import { Post } from "../../models/Post.model.js";
 import ApiError from "../../utils/ApiError.js";
+import { notifyPostComment, notifyPostLike } from "../notification/notification.service.js";
 import { getPostById } from "./post.service.js";
 
 const AUTHOR_FIELDS = "firstName lastName username avatar role";
@@ -51,6 +52,8 @@ export const likePost = async (user, postId) => {
     await Like.deleteOne({ post: post._id, user: user._id });
     throw new ApiError(404, "Post not found.");
   }
+
+  await notifyPostLike({ actor: user, post });
 
   return { likeCount: updatedPost.likeCount, isLiked: true };
 };
@@ -123,6 +126,8 @@ export const addComment = async (user, postId, commentData) => {
     await Comment.deleteOne({ _id: comment._id });
     throw new ApiError(404, "Post not found.");
   }
+
+  await notifyPostComment({ actor: user, post, comment });
 
   return comment.populate("author", AUTHOR_FIELDS);
 };

@@ -93,6 +93,41 @@ export const notifyConnectionAccepted = async ({ accepter, requesterId, connecti
   ]);
 };
 
+export const notifyPostLike = async ({ actor, post }) => {
+  const recipientId = post.author?._id ?? post.author;
+  if (String(recipientId) === String(actor._id)) return;
+
+  const actorName = [actor.firstName, actor.lastName].filter(Boolean).join(" ");
+  await createNotifications([
+    {
+      recipient: recipientId,
+      actor: actor._id,
+      type: "post_like",
+      title: "New post like",
+      message: `${actorName || "Someone"} liked your post.`,
+      relatedPostId: post._id,
+    },
+  ]);
+};
+
+export const notifyPostComment = async ({ actor, post, comment }) => {
+  const recipientId = post.author?._id ?? post.author;
+  if (String(recipientId) === String(actor._id)) return;
+
+  const actorName = [actor.firstName, actor.lastName].filter(Boolean).join(" ");
+  await createNotifications([
+    {
+      recipient: recipientId,
+      actor: actor._id,
+      type: "post_comment",
+      title: "New comment on your post",
+      message: `${actorName || "Someone"} commented on your post.`,
+      relatedPostId: post._id,
+      relatedCommentId: comment._id,
+    },
+  ]);
+};
+
 export const notifyApplicationStatus = async ({
   recruiter,
   applicantId,
