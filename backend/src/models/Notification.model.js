@@ -15,6 +15,8 @@ const notificationSchema = new Schema(
     type: {
       type: String,
       enum: [
+        "connection_request",
+        "connection_accepted",
         "job_application_received",
         "application_status_updated",
         "job_listing_removed",
@@ -38,6 +40,10 @@ const notificationSchema = new Schema(
       default: null,
     },
     relatedApplicationId: {
+      type: Schema.Types.ObjectId,
+      default: null,
+    },
+    relatedConnectionId: {
       type: Schema.Types.ObjectId,
       default: null,
     },

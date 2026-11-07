@@ -59,6 +59,40 @@ export const notifyNewApplication = async ({
   ]);
 };
 
+export const notifyConnectionRequest = async ({ requester, recipientId, connection }) => {
+  const requesterName = [requester.firstName, requester.lastName]
+    .filter(Boolean)
+    .join(" ");
+
+  await createNotifications([
+    {
+      recipient: recipientId,
+      actor: requester._id,
+      type: "connection_request",
+      title: "New connection request",
+      message: `${requesterName || "A user"} sent you a connection request.`,
+      relatedConnectionId: connection._id,
+    },
+  ]);
+};
+
+export const notifyConnectionAccepted = async ({ accepter, requesterId, connection }) => {
+  const accepterName = [accepter.firstName, accepter.lastName]
+    .filter(Boolean)
+    .join(" ");
+
+  await createNotifications([
+    {
+      recipient: requesterId,
+      actor: accepter._id,
+      type: "connection_accepted",
+      title: "Connection request accepted",
+      message: `${accepterName || "A user"} accepted your connection request.`,
+      relatedConnectionId: connection._id,
+    },
+  ]);
+};
+
 export const notifyApplicationStatus = async ({
   recruiter,
   applicantId,
