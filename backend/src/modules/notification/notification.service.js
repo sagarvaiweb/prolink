@@ -1,5 +1,6 @@
 import { Notification } from "../../models/Notification.model.js";
 import ApiError from "../../utils/ApiError.js";
+import { emitNotificationToUser } from "../../config/socket.js";
 
 const ensureActive = (user) => {
   if (user.accountStatus !== "active") {
@@ -14,12 +15,23 @@ const getPagination = ({ page = 1, limit = 20 }) => ({
 });
 
 export const createNotifications = async (notifications) => {
-  if (!notifications.length) return;
+  if (!notifications?.length) return [];
 
   try {
-    await Notification.insertMany(notifications, { ordered: false });
+    const createdNotifications = await Notification.insertMany(notifications, {
+      ordered: false,
+    });
+    createdNotifications.forEach((notification) =>
+      emitNotificationToUser(notification.recipient, notification.toObject())
+    );
+    return createdNotifications;
   } catch (error) {
     console.error("Could not create all job notifications.", error);
+    const insertedNotifications = error.insertedDocs ?? [];
+    insertedNotifications.forEach((notification) =>
+      emitNotificationToUser(notification.recipient, notification.toObject())
+    );
+    return insertedNotifications;
   }
 };
 
