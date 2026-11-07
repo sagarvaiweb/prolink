@@ -1,5 +1,6 @@
 import { Notification } from "../../models/Notification.model.js";
 import ApiError from "../../utils/ApiError.js";
+import { emitNotificationToUser } from "../../config/socket.js";
 
 const ensureActive = (user) => {
   if (user.accountStatus !== "active") {
@@ -14,12 +15,23 @@ const getPagination = ({ page = 1, limit = 20 }) => ({
 });
 
 export const createNotifications = async (notifications) => {
-  if (!notifications.length) return;
+  if (!notifications?.length) return [];
 
   try {
-    await Notification.insertMany(notifications, { ordered: false });
+    const createdNotifications = await Notification.insertMany(notifications, {
+      ordered: false,
+    });
+    createdNotifications.forEach((notification) =>
+      emitNotificationToUser(notification.recipient, notification.toObject())
+    );
+    return createdNotifications;
   } catch (error) {
     console.error("Could not create all job notifications.", error);
+    const insertedNotifications = error.insertedDocs ?? [];
+    insertedNotifications.forEach((notification) =>
+      emitNotificationToUser(notification.recipient, notification.toObject())
+    );
+    return insertedNotifications;
   }
 };
 
@@ -43,6 +55,75 @@ export const notifyNewApplication = async ({
       relatedJobId: job._id,
       relatedApplicationId: application._id,
       jobTitle: job.title,
+    },
+  ]);
+};
+
+export const notifyConnectionRequest = async ({ requester, recipientId, connection }) => {
+  const requesterName = [requester.firstName, requester.lastName]
+    .filter(Boolean)
+    .join(" ");
+
+  await createNotifications([
+    {
+      recipient: recipientId,
+      actor: requester._id,
+      type: "connection_request",
+      title: "New connection request",
+      message: `${requesterName || "A user"} sent you a connection request.`,
+      relatedConnectionId: connection._id,
+    },
+  ]);
+};
+
+export const notifyConnectionAccepted = async ({ accepter, requesterId, connection }) => {
+  const accepterName = [accepter.firstName, accepter.lastName]
+    .filter(Boolean)
+    .join(" ");
+
+  await createNotifications([
+    {
+      recipient: requesterId,
+      actor: accepter._id,
+      type: "connection_accepted",
+      title: "Connection request accepted",
+      message: `${accepterName || "A user"} accepted your connection request.`,
+      relatedConnectionId: connection._id,
+    },
+  ]);
+};
+
+export const notifyPostLike = async ({ actor, post }) => {
+  const recipientId = post.author?._id ?? post.author;
+  if (String(recipientId) === String(actor._id)) return;
+
+  const actorName = [actor.firstName, actor.lastName].filter(Boolean).join(" ");
+  await createNotifications([
+    {
+      recipient: recipientId,
+      actor: actor._id,
+      type: "post_like",
+      title: "New post like",
+      message: `${actorName || "Someone"} liked your post.`,
+      relatedPostId: post._id,
+    },
+  ]);
+};
+
+export const notifyPostComment = async ({ actor, post, comment }) => {
+  const recipientId = post.author?._id ?? post.author;
+  if (String(recipientId) === String(actor._id)) return;
+
+  const actorName = [actor.firstName, actor.lastName].filter(Boolean).join(" ");
+  await createNotifications([
+    {
+      recipient: recipientId,
+      actor: actor._id,
+      type: "post_comment",
+      title: "New comment on your post",
+      message: `${actorName || "Someone"} commented on your post.`,
+      relatedPostId: post._id,
+      relatedCommentId: comment._id,
     },
   ]);
 };
@@ -136,4 +217,20 @@ export const markAllNotificationsRead = async (user) => {
     { recipient: user._id, isRead: false },
     { $set: { isRead: true, readAt: new Date() } }
   );
+};
+
+export const getUnreadNotificationCount = async (user) => {
+  ensureActive(user);
+  return Notification.countDocuments({ recipient: user._id, isRead: false });
+};
+
+export const deleteNotification = async (user, notificationId) => {
+  ensureActive(user);
+
+  const notification = await Notification.findOneAndDelete({
+    _id: notificationId,
+    recipient: user._id,
+  });
+
+  if (!notification) throw new ApiError(404, "Notification not found.");
 };

@@ -1,5 +1,6 @@
 "use client";
 import { useGetCurrentUserQuery } from "@/redux/features/auth/authApi";
+import NotificationCenter from "@/components/notifications/NotificationCenter";
 
 export default function SessionProvider({ children }: { children: React.ReactNode }) {
   const { isLoading } = useGetCurrentUserQuery();
@@ -10,5 +11,10 @@ export default function SessionProvider({ children }: { children: React.ReactNod
       </div>
     );
   }
-  return <>{children}</>;
+  return (
+    <>
+      <NotificationCenter />
+      {children}
+    </>
+  );
 }

@@ -3,6 +3,10 @@ import { Connection } from "../../models/Connection.model.js";
 import { Follow } from "../../models/Follow.model.js";
 import { User } from "../../models/User.model.js";
 import ApiError from "../../utils/ApiError.js";
+import {
+  notifyConnectionAccepted,
+  notifyConnectionRequest,
+} from "../notification/notification.service.js";
 
 const getPairKey = (firstUserId, secondUserId) =>{
   return [String(firstUserId), String(secondUserId)].sort().join(":");
@@ -106,6 +110,11 @@ export const sendConnectionRequest = async (requester, recipientId) => {
       existingConnection.respondedAt = null;
       existingConnection.createdAt = new Date();
       await existingConnection.save();
+      await notifyConnectionRequest({
+        requester,
+        recipientId: recipient._id,
+        connection: existingConnection,
+      });
       return existingConnection;
     }
 
@@ -116,6 +125,11 @@ export const sendConnectionRequest = async (requester, recipientId) => {
     });
 
     await connection.save();
+    await notifyConnectionRequest({
+      requester,
+      recipientId: recipient._id,
+      connection,
+    });
     return connection;
 
   } catch (error) {
@@ -152,6 +166,11 @@ export const acceptConnectionRequest = async (recipient, connectionId) => {
   connection.status = "accepted";
   connection.respondedAt = new Date();
   await connection.save();
+  await notifyConnectionAccepted({
+    accepter: recipient,
+    requesterId: connection.requester,
+    connection,
+  });
   return connection;
 };
 
