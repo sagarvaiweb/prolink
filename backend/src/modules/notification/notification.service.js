@@ -137,3 +137,19 @@ export const markAllNotificationsRead = async (user) => {
     { $set: { isRead: true, readAt: new Date() } }
   );
 };
+
+export const getUnreadNotificationCount = async (user) => {
+  ensureActive(user);
+  return Notification.countDocuments({ recipient: user._id, isRead: false });
+};
+
+export const deleteNotification = async (user, notificationId) => {
+  ensureActive(user);
+
+  const notification = await Notification.findOneAndDelete({
+    _id: notificationId,
+    recipient: user._id,
+  });
+
+  if (!notification) throw new ApiError(404, "Notification not found.");
+};
