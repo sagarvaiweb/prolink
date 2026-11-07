@@ -76,6 +76,6 @@ export const validateJobQuery = (req, _res, next) => {
   if (error) {
     throw new ApiError(400, "Validation failed", error.details.map(({ message }) => message));
   }
-  req.query = value;
+  req.validatedQuery = value;
   next();
 };

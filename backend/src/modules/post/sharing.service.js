@@ -64,7 +64,7 @@ export const sharePost = async (user, postId, shareData) => {
     const updatedOriginal = await Post.findOneAndUpdate(
       { _id: originalPostId },
       { $inc: { shareCount: 1 } },
-      { new: true, projection: { _id: 1 } }
+      { returnDocument: "after", projection: { _id: 1 } }
     ).lean();
 
     if (!updatedOriginal) {

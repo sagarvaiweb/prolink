@@ -35,7 +35,7 @@ export const likePost = async (user, postId) => {
     updatedPost = await Post.findOneAndUpdate(
       { _id: post._id },
       { $inc: { likeCount: 1 } },
-      { new: true, projection: { likeCount: 1 } }
+      { returnDocument: "after", projection: { likeCount: 1 } }
     ).lean();
   } catch (error) {
     try {
@@ -69,7 +69,7 @@ export const unlikePost = async (user, postId) => {
   const updatedPost = await Post.findOneAndUpdate(
     { _id: post._id, likeCount: { $gt: 0 } },
     { $inc: { likeCount: -1 } },
-    { new: true, projection: { likeCount: 1 } }
+    { returnDocument: "after", projection: { likeCount: 1 } }
   ).lean();
   if (!updatedPost) {
     if (await Post.exists({ _id: post._id })) {

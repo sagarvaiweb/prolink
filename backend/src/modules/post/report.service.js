@@ -91,7 +91,7 @@ export const reviewPostReport = async (admin, reportId, status) => {
         reviewedAt: new Date(),
       },
     },
-    { new: true }
+    { returnDocument: "after" }
   ).populate(REPORT_POPULATE);
 
   if (!reviewedReport) {

@@ -210,7 +210,7 @@ export const updateApplicationStatus = async (
   const updatedApplication = await Application.findOneAndUpdate(
     { _id: application._id, status: application.status },
     { $set: { status: nextStatus, statusUpdatedAt: new Date() } },
-    { new: true, runValidators: true }
+    { returnDocument: "after", runValidators: true }
   ).populate("applicant", APPLICANT_FIELDS);
 
   if (!updatedApplication) {

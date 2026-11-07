@@ -12,7 +12,11 @@ import {
   useMarkAllNotificationsReadMutation,
   useMarkNotificationReadMutation,
 } from "@/redux/features/notifications/notificationsApi";
-import { formatNotificationDate, getNotificationDestination } from "@/lib/notifications";
+import {
+  formatNotificationDate,
+  getNotificationDestination,
+  getNotificationErrorMessage,
+} from "@/lib/notifications";
 import type { AppNotification } from "@/types/notification.types";
 
 const PAGE_SIZE = 15;
@@ -67,7 +71,14 @@ function NotificationCard({
 export default function NotificationsPage() {
   const [page, setPage] = useState(1);
   const [unreadOnly, setUnreadOnly] = useState(false);
-  const { currentData, isLoading, isFetching, isError, refetch } = useGetNotificationsQuery({
+  const {
+    currentData,
+    isLoading,
+    isFetching,
+    isError,
+    error,
+    refetch,
+  } = useGetNotificationsQuery({
     page,
     limit: PAGE_SIZE,
     unreadOnly,
@@ -134,7 +145,7 @@ export default function NotificationsPage() {
 
           {isError && (
             <div role="alert" className="rounded-2xl border border-rose-200 bg-white p-6 text-sm text-rose-700">
-              Could not load notifications. <button type="button" onClick={() => void refetch()} className="font-semibold underline underline-offset-2">Try again</button>
+              {getNotificationErrorMessage(error)} <button type="button" onClick={() => void refetch()} className="font-semibold underline underline-offset-2">Try again</button>
             </div>
           )}
 

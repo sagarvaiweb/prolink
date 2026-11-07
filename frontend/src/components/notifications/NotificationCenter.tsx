@@ -15,7 +15,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { getJobErrorMessage } from "@/components/jobs/jobErrors";
-import { getNotificationDestination, formatNotificationDate } from "@/lib/notifications";
+import {
+  getNotificationDestination,
+  formatNotificationDate,
+  getNotificationErrorMessage,
+} from "@/lib/notifications";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import { notificationsApi, useGetNotificationsQuery, useGetUnreadNotificationCountQuery, useMarkAllNotificationsReadMutation, useMarkNotificationReadMutation, useDeleteNotificationMutation } from "@/redux/features/notifications/notificationsApi";
 import type { AppNotification } from "@/types/notification.types";
@@ -54,7 +58,13 @@ export default function NotificationCenter() {
   const { data: unreadData } = useGetUnreadNotificationCountQuery(undefined, {
     skip: !accessToken,
   });
-  const { currentData, isFetching, isError, refetch } = useGetNotificationsQuery(
+  const {
+    currentData,
+    isFetching,
+    isError,
+    error,
+    refetch,
+  } = useGetNotificationsQuery(
     { page: 1, limit: RECENT_LIMIT },
     { skip: !accessToken }
   );
@@ -75,6 +85,9 @@ export default function NotificationCenter() {
       dispatch(notificationsApi.util.invalidateTags(["Notifications"]));
     };
 
+    socket.on("connect_error", (error) => {
+      console.error("Realtime notifications could not connect:", error.message);
+    });
     socket.on("connect", refreshNotifications);
     socket.on("notification:new", (payload: unknown) => {
       if (!isNotification(payload)) return;
@@ -190,7 +203,7 @@ export default function NotificationCenter() {
               <div className="max-h-[min(60vh,26rem)] overflow-y-auto p-2">
                 {isError ? (
                   <div role="alert" className="px-4 py-8 text-center">
-                    <p className="text-sm text-slate-600">Could not load your notifications.</p>
+                    <p className="text-sm text-slate-600">{getNotificationErrorMessage(error)}</p>
                     <button type="button" onClick={() => void refetch()} className="mt-2 rounded-lg px-3 py-2 text-xs font-semibold text-primary-800 transition hover:bg-primary-50">Try again</button>
                   </div>
                 ) : isFetching && notifications.length === 0 ? (

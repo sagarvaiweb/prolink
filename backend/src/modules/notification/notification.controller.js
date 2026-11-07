@@ -5,7 +5,7 @@ import * as notificationService from "./notification.service.js";
 export const getMyNotifications = asyncHandler(async (req, res) => {
   const result = await notificationService.getMyNotifications(
     req.user,
-    req.query
+    req.validatedQuery
   );
   res
     .status(200)

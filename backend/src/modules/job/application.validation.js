@@ -34,6 +34,6 @@ export const validateApplicationQuery = (req, _res, next) => {
     );
   }
 
-  req.query = value;
+  req.validatedQuery = value;
   next();
 };

@@ -167,7 +167,11 @@ export const deleteEducation = async (userId, educationId) => {
 
 // upload a new profile photo (avatar) for the currently authenticated user
 export const uploadProfilePhoto = async (userId, fileUrl) => {
-  const user = await User.findByIdAndUpdate(userId, { avatar: fileUrl }, { new: true });
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { avatar: fileUrl },
+    { returnDocument: "after" }
+  );
   if (!user) throw new ApiError(404, "User account not found.");
   return { avatar: user.avatar };
 };
@@ -188,4 +192,3 @@ export const uploadResume = async (userId, fileUrl) => {
   await profile.save();
   return profile;
 };
-

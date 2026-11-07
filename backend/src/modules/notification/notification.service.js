@@ -26,7 +26,7 @@ export const createNotifications = async (notifications) => {
     );
     return createdNotifications;
   } catch (error) {
-    console.error("Could not create all job notifications.", error);
+    console.error("Could not create notifications.", error);
     const insertedNotifications = error.insertedDocs ?? [];
     insertedNotifications.forEach((notification) =>
       emitNotificationToUser(notification.recipient, notification.toObject())
@@ -196,7 +196,7 @@ export const markNotificationRead = async (user, notificationId) => {
   const notification = await Notification.findOneAndUpdate(
     { _id: notificationId, recipient: user._id, isRead: false },
     { $set: { isRead: true, readAt: new Date() } },
-    { new: true }
+    { returnDocument: "after" }
   );
 
   if (notification) return notification;

@@ -10,7 +10,7 @@ export const createJob = asyncHandler(async (req, res) => {
 });
 
 export const getJobs = asyncHandler(async (req, res) => {
-  const result = await jobService.getJobs(req.user, req.query);
+  const result = await jobService.getJobs(req.user, req.validatedQuery);
   res
     .status(200)
     .json(new ApiResponse(200, result, "Job listings fetched successfully."));
@@ -59,21 +59,21 @@ export const unsaveJob = asyncHandler(async (req, res) => {
 });
 
 export const getSavedJobs = asyncHandler(async (req, res) => {
-  const result = await jobService.getSavedJobs(req.user, req.query);
+  const result = await jobService.getSavedJobs(req.user, req.validatedQuery);
   res
     .status(200)
     .json(new ApiResponse(200, result, "Saved jobs fetched successfully."));
 });
 
 export const getMyJobs = asyncHandler(async (req, res) => {
-  const result = await jobService.getMyJobs(req.user, req.query);
+  const result = await jobService.getMyJobs(req.user, req.validatedQuery);
   res
     .status(200)
     .json(new ApiResponse(200, result, "Your job listings fetched successfully."));
 });
 
 export const getJobsForModeration = asyncHandler(async (req, res) => {
-  const result = await jobService.getJobsForModeration(req.query);
+  const result = await jobService.getJobsForModeration(req.validatedQuery);
   res
     .status(200)
     .json(new ApiResponse(200, result, "Pending job listings fetched successfully."));

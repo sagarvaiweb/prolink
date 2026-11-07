@@ -23,7 +23,10 @@ export const withdrawApplication = asyncHandler(async (req, res) => {
 });
 
 export const getMyApplications = asyncHandler(async (req, res) => {
-  const result = await applicationService.getMyApplications(req.user, req.query);
+  const result = await applicationService.getMyApplications(
+    req.user,
+    req.validatedQuery
+  );
   res
     .status(200)
     .json(new ApiResponse(200, result, "Your applications fetched successfully."));
@@ -33,7 +36,7 @@ export const getApplicantsForJob = asyncHandler(async (req, res) => {
   const result = await applicationService.getApplicantsForJob(
     req.user,
     req.params.jobId,
-    req.query
+    req.validatedQuery
   );
   res
     .status(200)
