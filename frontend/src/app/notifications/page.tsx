@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Bell, CheckCheck, ChevronLeft, ChevronRight, LoaderCircle, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -77,6 +77,12 @@ export default function NotificationsPage() {
   const [deleteNotification, { isLoading: isDeleting }] = useDeleteNotificationMutation();
   const result = currentData?.data;
   const isUpdating = isMarking || isMarkingAll || isDeleting;
+
+  useEffect(() => {
+    if (!result || isFetching) return;
+    const lastAvailablePage = Math.max(1, result.pagination.totalPages);
+    if (page > lastAvailablePage) setPage(lastAvailablePage);
+  }, [isFetching, page, result]);
 
   const perform = async (action: () => Promise<unknown>, successMessage: string) => {
     try {

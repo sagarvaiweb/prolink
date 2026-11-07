@@ -54,7 +54,7 @@ export default function NotificationCenter() {
   const { data: unreadData } = useGetUnreadNotificationCountQuery(undefined, {
     skip: !accessToken,
   });
-  const { currentData, isFetching } = useGetNotificationsQuery(
+  const { currentData, isFetching, isError, refetch } = useGetNotificationsQuery(
     { page: 1, limit: RECENT_LIMIT },
     { skip: !accessToken }
   );
@@ -188,7 +188,12 @@ export default function NotificationCenter() {
               </div>
 
               <div className="max-h-[min(60vh,26rem)] overflow-y-auto p-2">
-                {isFetching && notifications.length === 0 ? (
+                {isError ? (
+                  <div role="alert" className="px-4 py-8 text-center">
+                    <p className="text-sm text-slate-600">Could not load your notifications.</p>
+                    <button type="button" onClick={() => void refetch()} className="mt-2 rounded-lg px-3 py-2 text-xs font-semibold text-primary-800 transition hover:bg-primary-50">Try again</button>
+                  </div>
+                ) : isFetching && notifications.length === 0 ? (
                   <div role="status" className="flex items-center justify-center gap-2 px-4 py-10 text-sm text-slate-500"><LoaderCircle className="animate-spin" size={16} /> Loading notifications</div>
                 ) : notifications.length === 0 ? (
                   <div className="px-5 py-10 text-center"><Bell className="mx-auto text-slate-300" size={25} /><p className="mt-3 text-sm font-semibold text-slate-800">You’re all caught up</p><p className="mt-1 text-xs text-slate-500">New activity will show up here.</p></div>
