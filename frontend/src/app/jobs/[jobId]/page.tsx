@@ -25,6 +25,7 @@ import { useGetMyProfileQuery } from "@/redux/features/profile/profileApi";
 import { useAppSelector } from "@/redux/hooks";
 import { getJobErrorMessage } from "@/components/jobs/jobErrors";
 import type { ExperienceLevel, JobType } from "@/types/job.types";
+import JobCompanyAttribution from "@/components/jobs/JobCompanyAttribution";
 
 const experienceLabels: Record<ExperienceLevel, string> = {
   entry: "Entry level",
@@ -84,10 +85,6 @@ export default function JobDetailPage() {
     }
   };
 
-  const recruiterName = job?.postedBy
-    ? `${job.postedBy.firstName} ${job.postedBy.lastName}`.trim()
-    : "ProLink employer";
-
   return (
     <ProtectedRoute>
       <main className="min-h-screen bg-slate-50 px-4 py-7 sm:px-6 lg:py-10">
@@ -145,7 +142,9 @@ export default function JobDetailPage() {
                 <div aria-hidden="true" className="absolute -right-10 -top-16 h-56 w-56 rounded-full border border-white/10" />
                 <div className="relative flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
                   <div className="max-w-3xl">
-                    <p className="text-sm font-medium text-primary-100">{recruiterName}</p>
+                    <div className="mb-4">
+                      <JobCompanyAttribution company={job.company} recruiter={job.postedBy} showRecruiter inverse />
+                    </div>
                     <h1 className="mt-2 text-3xl font-bold tracking-tight sm:text-4xl">{job.title}</h1>
                     <div className="mt-5 flex flex-wrap gap-x-5 gap-y-3 text-sm text-primary-100">
                       <span className="inline-flex items-center gap-2">

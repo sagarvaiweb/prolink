@@ -8,6 +8,7 @@ import {
   Trash2,
 } from "lucide-react";
 import type { Job } from "@/types/job.types";
+import JobCompanyAttribution from "@/components/jobs/JobCompanyAttribution";
 
 function StatusBadge({ job }: { job: Job }) {
   if (job.moderationStatus === "pending") {
@@ -42,6 +43,7 @@ export default function RecruiterJobCard({
             </span>
           </div>
           <h2 className="mt-3 text-lg font-bold text-slate-900">{job.title}</h2>
+          <div className="mt-3"><JobCompanyAttribution company={job.company} recruiter={job.postedBy} /></div>
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-sm text-slate-500">
             <span className="inline-flex items-center gap-1.5">
               <MapPin size={15} />
