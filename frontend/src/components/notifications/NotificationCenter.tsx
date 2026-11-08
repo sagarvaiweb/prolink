@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { io } from "socket.io-client";
 import {
   Bell,
@@ -51,12 +51,16 @@ function isNotification(value: unknown): value is AppNotification {
 
 export default function NotificationCenter() {
   const router = useRouter();
+  const pathname = usePathname();
   const dispatch = useAppDispatch();
   const accessToken = useAppSelector((state) => state.auth.accessToken);
+  const isPublicPage =
+    pathname === "/" || pathname === "/auth" || pathname.startsWith("/auth/");
+  const shouldShowHeader = Boolean(accessToken && !isPublicPage);
   const [isOpen, setIsOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const { data: unreadData } = useGetUnreadNotificationCountQuery(undefined, {
-    skip: !accessToken,
+    skip: !shouldShowHeader,
   });
   const {
     currentData,
@@ -66,14 +70,14 @@ export default function NotificationCenter() {
     refetch,
   } = useGetNotificationsQuery(
     { page: 1, limit: RECENT_LIMIT },
-    { skip: !accessToken }
+    { skip: !shouldShowHeader }
   );
   const [markRead, { isLoading: isMarkingRead }] = useMarkNotificationReadMutation();
   const [markAllRead, { isLoading: isMarkingAllRead }] = useMarkAllNotificationsReadMutation();
   const [deleteNotification, { isLoading: isDeleting }] = useDeleteNotificationMutation();
 
   useEffect(() => {
-    if (!accessToken) return;
+    if (!shouldShowHeader) return;
 
     const socket = io(getSocketOrigin(), {
       auth: { token: accessToken },
@@ -98,7 +102,7 @@ export default function NotificationCenter() {
     return () => {
       socket.disconnect();
     };
-  }, [accessToken, dispatch]);
+  }, [accessToken, dispatch, shouldShowHeader]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -118,7 +122,7 @@ export default function NotificationCenter() {
     };
   }, [isOpen]);
 
-  if (!accessToken) return null;
+  if (!shouldShowHeader) return null;
 
   const notifications = currentData?.data.notifications ?? [];
   const unreadCount = unreadData?.data.unreadCount ?? currentData?.data.unreadCount ?? 0;
