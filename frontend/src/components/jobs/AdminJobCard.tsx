@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 import type { Job } from "@/types/job.types";
+import JobCompanyAttribution from "@/components/jobs/JobCompanyAttribution";
 
 interface AdminJobCardProps {
   job: Job;
@@ -27,10 +28,6 @@ export default function AdminJobCard({
   onRemove,
 }: AdminJobCardProps) {
   const [note, setNote] = useState("");
-  const recruiterName = job.postedBy
-    ? `${job.postedBy.firstName} ${job.postedBy.lastName}`.trim()
-    : "Unavailable recruiter";
-
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -44,7 +41,7 @@ export default function AdminJobCard({
             </span>
           </div>
           <h2 className="mt-3 text-lg font-bold text-slate-900">{job.title}</h2>
-          <p className="mt-1 text-sm text-slate-600">Posted by {recruiterName}</p>
+          <div className="mt-3"><JobCompanyAttribution company={job.company} recruiter={job.postedBy} showRecruiter /></div>
           <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2 text-sm text-slate-500">
             <span className="inline-flex items-center gap-1.5">
               <MapPin size={15} />

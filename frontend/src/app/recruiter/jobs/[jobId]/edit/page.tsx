@@ -14,6 +14,7 @@ import {
 } from "@/redux/features/jobs/jobsApi";
 import { useAppSelector } from "@/redux/hooks";
 import type { JobPayload } from "@/types/job.types";
+import JobCompanyAttribution from "@/components/jobs/JobCompanyAttribution";
 
 export default function EditJobPage() {
   const user = useAppSelector((state) => state.auth.user);
@@ -81,6 +82,12 @@ export default function EditJobPage() {
                       <h1 className="mt-1 text-2xl font-bold sm:text-3xl">Edit job</h1>
                     </div>
                   </div>
+                  {job.company && (
+                    <div className="mt-5 rounded-2xl bg-white/10 p-4">
+                      <p className="mb-2 text-xs font-medium text-primary-100">Company page</p>
+                      <JobCompanyAttribution company={job.company} recruiter={job.postedBy} showRecruiter inverse />
+                    </div>
+                  )}
                   {job.moderationStatus === "approved" && (
                     <p className="mt-4 text-sm leading-6 text-primary-100">
                       Changes to an approved listing will send it back for admin review.

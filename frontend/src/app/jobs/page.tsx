@@ -124,6 +124,12 @@ export default function JobsPage() {
               <BookmarkCheck size={17} />
               Saved jobs
             </Link>
+            <Link
+              href="/companies"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-primary-200 hover:text-primary-800"
+            >
+              Explore companies
+            </Link>
           </div>
 
           <section className="relative overflow-hidden rounded-3xl bg-linear-to-br from-primary-950 via-primary-800 to-primary-700 px-6 py-8 text-white shadow-lg shadow-primary-950/10 sm:px-9 sm:py-10">

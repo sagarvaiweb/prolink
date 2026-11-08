@@ -1,6 +1,8 @@
 import { Application } from "../../models/Application.model.js";
 import { Job } from "../../models/Job.model.js";
 import { Profile } from "../../models/Profile.model.js";
+import { Company } from "../../models/Company.model.js";
+import { CompanyMember } from "../../models/CompanyMember.model.js";
 import ApiError from "../../utils/ApiError.js";
 import {
   notifyApplicationStatus,
@@ -28,7 +30,7 @@ const getOpenJob = async (jobId) => {
     status: "open",
     moderationStatus: "approved",
   })
-    .select("_id postedBy requiredSkills status moderationStatus")
+    .select("_id postedBy postedByCompany postedByUser requiredSkills status moderationStatus")
     .lean();
 
   if (!job) {
@@ -37,7 +39,46 @@ const getOpenJob = async (jobId) => {
     throw new ApiError(400, "This job is no longer accepting applications.");
   }
 
+  if (job.postedByCompany) {
+    const company = await Company.findOne({
+      _id: job.postedByCompany,
+      isVerified: true,
+      isSuspended: false,
+    })
+      .select("_id")
+      .lean();
+    if (!company) {
+      throw new ApiError(400, "This job is no longer accepting applications.");
+    }
+  }
+
   return job;
+};
+
+const ensureCanManageJobApplications = async (recruiter, job) => {
+  if (job.postedByCompany) {
+    const activeCompany = await Company.exists({
+      _id: job.postedByCompany,
+      isSuspended: false,
+    });
+    if (!activeCompany) {
+      throw new ApiError(403, "This company's jobs are not available for management.");
+    }
+
+    const membership = await CompanyMember.exists({
+      company: job.postedByCompany,
+      user: recruiter._id,
+    });
+    if (!membership) {
+      throw new ApiError(403, "You can only manage applicants for your company.");
+    }
+    return;
+  }
+
+  const posterId = job.postedByUser ?? job.postedBy;
+  if (String(posterId) !== String(recruiter._id)) {
+    throw new ApiError(403, "You can only manage applicants for jobs you posted.");
+  }
 };
 
 const normalizeDuplicateApplication = (error) => {
@@ -89,7 +130,7 @@ export const applyToJob = async (applicant, jobId) => {
 
   await notifyNewApplication({
     applicant,
-    recruiterId: job.postedBy,
+    recruiterId: job.postedByUser ?? job.postedBy,
     job,
     application,
   });
@@ -135,8 +176,21 @@ export const getMyApplications = async (applicant, pagination) => {
     Application.find(filter)
       .populate({
         path: "job",
-        select: "title location jobType experienceLevel status postedBy",
-        populate: { path: "postedBy", select: "firstName lastName username" },
+        select: "title location jobType experienceLevel status postedBy postedByUser postedByCompany",
+        populate: [
+          {
+            path: "postedBy",
+            select: "firstName lastName username avatar",
+          },
+          {
+            path: "postedByUser",
+            select: "firstName lastName username avatar",
+          },
+          {
+            path: "postedByCompany",
+            select: "name logo industry website isVerified isSuspended",
+          },
+        ],
       })
       .sort({ createdAt: -1, _id: -1 })
       .skip(skip)
@@ -146,7 +200,16 @@ export const getMyApplications = async (applicant, pagination) => {
   ]);
 
   return {
-    applications: applications.filter(({ job }) => job),
+    applications: applications
+      .filter(({ job }) => job)
+      .map(({ job, ...application }) => ({
+        ...application,
+        job: {
+          ...job,
+          postedBy: job.postedByUser ?? job.postedBy ?? null,
+          company: job.postedByCompany ?? null,
+        },
+      })),
     pagination: { total, page, limit, totalPages: Math.ceil(total / limit) },
   };
 };
@@ -154,11 +217,11 @@ export const getMyApplications = async (applicant, pagination) => {
 export const getApplicantsForJob = async (recruiter, jobId, pagination) => {
   ensureActive(recruiter);
 
-  const job = await Job.findById(jobId).select("_id postedBy").lean();
+  const job = await Job.findById(jobId)
+    .select("_id postedBy postedByCompany postedByUser")
+    .lean();
   if (!job) throw new ApiError(404, "Job listing not found.");
-  if (String(job.postedBy) !== String(recruiter._id)) {
-    throw new ApiError(403, "You can only manage jobs you posted.");
-  }
+  await ensureCanManageJobApplications(recruiter, job);
 
   const { page, limit, skip } = getPagination(pagination);
   const filter = { job: job._id };
@@ -196,12 +259,10 @@ export const updateApplicationStatus = async (
   if (!application) throw new ApiError(404, "Application not found.");
 
   const job = await Job.findById(application.job)
-    .select("postedBy title")
+    .select("postedBy postedByCompany postedByUser title")
     .lean();
   if (!job) throw new ApiError(404, "Job listing not found.");
-  if (String(job.postedBy) !== String(recruiter._id)) {
-    throw new ApiError(403, "You can only manage applicants for your own jobs.");
-  }
+  await ensureCanManageJobApplications(recruiter, job);
 
   if (!allowedTransitions[application.status]?.includes(nextStatus)) {
     throw new ApiError(400, "Invalid application status change.");

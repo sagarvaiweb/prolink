@@ -32,6 +32,16 @@ export const uploadPhoto = multer({
   fileFilter: fileFilter(["image/jpeg", "image/png"]),
 });
 
+// Company logos use the same image constraints as profile photos, in their own folder.
+export const uploadCompanyLogo = multer({
+  storage: createStorage("company-logos", ["jpg", "jpeg", "png"], "image"),
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: fileFilter(
+    ["image/jpeg", "image/png"],
+    "Company logos must be JPG or PNG images."
+  ),
+});
+
 // Post images, JPG/PNG, max 5MB per image
 export const uploadPostMedia = multer({
   storage: createStorage("posts", ["jpg", "jpeg", "png"], "image"),
