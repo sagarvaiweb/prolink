@@ -193,6 +193,11 @@ export default function DashboardPage() {
                       <Link href="/feed" className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10">
                         Go to feed <ArrowRight size={16} />
                       </Link>
+                      {user?.role === "recruiter" && (
+                        <Link href="/recruiter/dashboard" className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10">
+                          Recruiter analytics <BriefcaseBusiness size={16} />
+                        </Link>
+                      )}
                     </div>
                   </div>
                   <div className="flex flex-col gap-4 xl:items-end">

@@ -43,7 +43,36 @@ export interface ApplicationsSummary {
   byStatus: Record<ApplicationStatus, number>;
 }
 
+export interface RecruiterJobAnalytics {
+  _id: string;
+  title: string;
+  status: "open" | "closed";
+  moderationStatus: "pending" | "approved" | "rejected";
+  createdAt: string;
+  applicantCount: number;
+  views: number;
+  applicants: number;
+  byStatus: Record<ApplicationStatus, number>;
+}
+
+export interface RecruiterJobsOverview {
+  jobs: RecruiterJobAnalytics[];
+  totals: {
+    jobs: number;
+    views: number;
+    applicants: number;
+  };
+}
+
+export interface RecruiterJobFunnel {
+  jobId: string;
+  totalApplicants: number;
+  byStatus: Record<ApplicationStatus, number>;
+}
+
 export type ProfileViewsResponse = ApiResponse<ProfileViewsAnalytics>;
 export type PostEngagementResponse = ApiResponse<PostEngagementAnalytics>;
 export type NetworkGrowthResponse = ApiResponse<NetworkGrowthAnalytics>;
 export type ApplicationsSummaryResponse = ApiResponse<ApplicationsSummary>;
+export type RecruiterJobsOverviewResponse = ApiResponse<RecruiterJobsOverview>;
+export type RecruiterJobFunnelResponse = ApiResponse<RecruiterJobFunnel>;

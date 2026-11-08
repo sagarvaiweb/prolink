@@ -6,6 +6,8 @@ import type {
   NetworkGrowthResponse,
   PostEngagementResponse,
   ProfileViewsResponse,
+  RecruiterJobFunnelResponse,
+  RecruiterJobsOverviewResponse,
 } from "@/types/dashboard.types";
 
 export const dashboardApi = createApi({
@@ -33,6 +35,12 @@ export const dashboardApi = createApi({
     getApplicationsSummary: builder.query<ApplicationsSummaryResponse, void>({
       query: () => "/dashboard/applications-summary",
     }),
+    getRecruiterJobsOverview: builder.query<RecruiterJobsOverviewResponse, void>({
+      query: () => "/dashboard/recruiter/jobs-overview",
+    }),
+    getRecruiterJobFunnel: builder.query<RecruiterJobFunnelResponse, string>({
+      query: (jobId) => `/dashboard/recruiter/${jobId}/funnel`,
+    }),
   }),
 });
 
@@ -41,4 +49,6 @@ export const {
   useGetPostEngagementQuery,
   useGetNetworkGrowthQuery,
   useGetApplicationsSummaryQuery,
+  useGetRecruiterJobsOverviewQuery,
+  useGetRecruiterJobFunnelQuery,
 } = dashboardApi;
