@@ -1,5 +1,6 @@
 import { Profile } from "../../models/Profile.model.js";
 import { User } from "../../models/User.model.js";
+import { ProfileView } from "../../models/ProfileView.model.js";
 import ApiError from "../../utils/ApiError.js";
 
 // Weighted profile completion calculation
@@ -50,9 +51,13 @@ export const getProfileByUserId = async (targetUserId, requesterId) => {
     // "connections" visibility would check a Connections model here (future module)
     // For now, treat "connections" the same as public until that module exists
 
-    // Log a view + increment count (only for non-owner views)
+    // Record each authenticated non-owner profile visit. Store viewer IDs only
+    // in the internal event log; dashboard APIs should return aggregates only.
+    await Promise.all([
+      ProfileView.create({ profile: profile._id, viewer: requesterId }),
+      Profile.updateOne({ _id: profile._id }, { $inc: { viewCount: 1 } }),
+    ]);
     profile.viewCount += 1;
-    await profile.save();
   }
 
   return profile;
