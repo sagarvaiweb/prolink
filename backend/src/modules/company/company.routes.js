@@ -9,6 +9,7 @@ import {
   getCompaniesForVerification,
   getCompanyById,
   getCompanyMembers,
+  searchRecruiterCandidates,
   getCompanyJobs,
   followCompany,
   removeCompanyMember,
@@ -27,6 +28,7 @@ import {
   validateCompanyBody,
   validateCompanyQuery,
   validateCompanyMembersQuery,
+  validateCompanyRecruiterCandidatesQuery,
   validateCompanyJobsQuery,
 } from "./company.validation.js";
 
@@ -68,6 +70,13 @@ router.get(
   validateParams(companyIdParamsSchema),
   validateCompanyMembersQuery,
   getCompanyMembers
+);
+router.get(
+  "/:companyId/recruiter-candidates",
+  validateParams(companyIdParamsSchema),
+  requireCompanyRole("owner", "admin"),
+  validateCompanyRecruiterCandidatesQuery,
+  searchRecruiterCandidates
 );
 router.post(
   "/:companyId/members",

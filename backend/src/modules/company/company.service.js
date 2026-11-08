@@ -323,6 +323,45 @@ export const getCompanyMembers = async (user, companyId, query) => {
   };
 };
 
+export const searchRecruiterCandidates = async (manager, companyId, query) => {
+  const { company } = await ensureCanManageMembers(manager, companyId);
+  const { page, limit, skip } = getPagination(query);
+  const search = new RegExp(escapeRegex(query.search.trim()), "i");
+  const existingMemberIds = await CompanyMember.distinct("user", {
+    company: company._id,
+  });
+  const filter = {
+    role: "recruiter",
+    accountStatus: "active",
+    _id: { $nin: existingMemberIds },
+    $or: [
+      { firstName: search },
+      { lastName: search },
+      { username: search },
+    ],
+  };
+
+  const [recruiters, total] = await Promise.all([
+    User.find(filter)
+      .select("firstName lastName username avatar")
+      .sort({ firstName: 1, lastName: 1, _id: 1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    User.countDocuments(filter),
+  ]);
+
+  return {
+    recruiters,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+};
+
 export const followCompany = async (user, companyId) => {
   ensureActive(user);
   const company = await getActiveCompany(companyId);

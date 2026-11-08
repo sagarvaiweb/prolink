@@ -68,6 +68,17 @@ export const getCompanyMembers = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, result, "Company members fetched successfully."));
 });
 
+export const searchRecruiterCandidates = asyncHandler(async (req, res) => {
+  const result = await companyService.searchRecruiterCandidates(
+    req.user,
+    req.params.companyId,
+    req.validatedQuery
+  );
+  res
+    .status(200)
+    .json(new ApiResponse(200, result, "Recruiter candidates fetched successfully."));
+});
+
 export const getCompaniesForVerification = asyncHandler(async (req, res) => {
   const result = await companyService.getCompaniesForVerification(
     req.user,

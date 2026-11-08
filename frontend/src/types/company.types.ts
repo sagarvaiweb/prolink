@@ -17,6 +17,7 @@ export interface Company {
   isVerified: boolean;
   isSuspended: boolean;
   followerCount: number;
+  ownerCount: number;
   createdAt: string;
   updatedAt: string;
   isFollowing?: boolean;
@@ -40,7 +41,7 @@ export interface CompanyListParams {
   companySize?: CompanySize;
 }
 
-export interface CompanyPagination extends JobPagination {}
+export type CompanyPagination = JobPagination;
 export interface CompanyListData {
   companies: Company[];
   pagination: CompanyPagination;
@@ -56,7 +57,37 @@ export interface CompanyJobsData {
   pagination: CompanyPagination;
 }
 
+export interface CompanyMember {
+  _id: string;
+  company: string;
+  user: Pick<User, "_id" | "firstName" | "lastName" | "username" | "avatar" | "role">;
+  role: CompanyRole;
+  addedAt: string;
+}
+
+export interface CompanyMembersData {
+  members: CompanyMember[];
+  pagination: CompanyPagination;
+}
+
+export interface RecruiterCandidate {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  username: string;
+  avatar?: string;
+}
+
+export interface RecruiterCandidatesData {
+  recruiters: RecruiterCandidate[];
+  pagination: CompanyPagination;
+}
+
 export type CompanyListResponse = ApiResponse<CompanyListData>;
 export type CompanyProfileResponse = ApiResponse<CompanyProfileData>;
 export type CompanyJobsResponse = ApiResponse<CompanyJobsData>;
 export type CompanyMutationResponse = ApiResponse<{ company: Company; viewerRole: CompanyRole }>;
+export type CompanyMembersResponse = ApiResponse<CompanyMembersData>;
+export type RecruiterCandidatesResponse = ApiResponse<RecruiterCandidatesData>;
+export type CompanyMemberResponse = ApiResponse<CompanyMember>;
+export type CompanyActionResponse = ApiResponse<null>;

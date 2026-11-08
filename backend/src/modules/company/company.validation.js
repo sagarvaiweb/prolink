@@ -29,6 +29,12 @@ export const companyMembersQuerySchema = Joi.object({
   limit: Joi.number().integer().min(1).max(100).default(50),
 }).unknown(false);
 
+export const companyRecruiterCandidatesQuerySchema = Joi.object({
+  search: Joi.string().trim().min(2).max(100).required(),
+  page: Joi.number().integer().min(1).max(100000).default(1),
+  limit: Joi.number().integer().min(1).max(20).default(10),
+}).unknown(false);
+
 export const companyJobsQuerySchema = Joi.object({
   page: Joi.number().integer().min(1).max(100000).default(1),
   limit: Joi.number().integer().min(1).max(50).default(10),
@@ -89,6 +95,24 @@ export const validateCompanyQuery = (req, _res, next) => {
 
 export const validateCompanyMembersQuery = (req, _res, next) => {
   const { error, value } = companyMembersQuerySchema.validate(req.query, {
+    abortEarly: false,
+    convert: true,
+  });
+
+  if (error) {
+    throw new ApiError(
+      400,
+      "Validation failed",
+      error.details.map(({ message }) => message)
+    );
+  }
+
+  req.validatedQuery = value;
+  next();
+};
+
+export const validateCompanyRecruiterCandidatesQuery = (req, _res, next) => {
+  const { error, value } = companyRecruiterCandidatesQuerySchema.validate(req.query, {
     abortEarly: false,
     convert: true,
   });

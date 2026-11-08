@@ -5,14 +5,19 @@ import type {
   CompanyListParams,
   CompanyListResponse,
   CompanyMutationResponse,
+  CompanyMembersResponse,
+  CompanyMemberResponse,
+  CompanyActionResponse,
+  CompanyRole,
   CompanyPayload,
   CompanyProfileResponse,
+  RecruiterCandidatesResponse,
 } from "@/types/company.types";
 
 export const companiesApi = createApi({
   reducerPath: "companiesApi",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["Companies", "Company", "CompanyJobs"],
+  tagTypes: ["Companies", "Company", "CompanyJobs", "CompanyMembers", "RecruiterCandidates"],
   endpoints: (builder) => ({
     searchCompanies: builder.query<CompanyListResponse, CompanyListParams>({
       query: (params) => ({ url: "/companies", params }),
@@ -40,6 +45,31 @@ export const companiesApi = createApi({
         { type: "Companies", id: "LIST" },
       ],
     }),
+    getCompanyMembers: builder.query<CompanyMembersResponse, { companyId: string; page: number; limit: number }>({
+      query: ({ companyId, page, limit }) => ({ url: `/companies/${companyId}/members`, params: { page, limit } }),
+      providesTags: (result, _error, { companyId }) => [
+        { type: "CompanyMembers", id: companyId },
+        ...(result?.data.members.map(({ _id }) => ({ type: "CompanyMembers" as const, id: _id })) ?? []),
+      ],
+    }),
+    searchRecruiterCandidates: builder.query<RecruiterCandidatesResponse, { companyId: string; search: string; page: number; limit: number }>({
+      query: ({ companyId, ...params }) => ({ url: `/companies/${companyId}/recruiter-candidates`, params }),
+      providesTags: (_result, _error, { companyId }) => [{ type: "RecruiterCandidates", id: companyId }],
+    }),
+    addCompanyMember: builder.mutation<CompanyMemberResponse, { companyId: string; userId: string; role: Extract<CompanyRole, "admin" | "recruiter"> }>({
+      query: ({ companyId, userId, role }) => ({ url: `/companies/${companyId}/members`, method: "POST", body: { userId, role } }),
+      invalidatesTags: (_result, _error, { companyId }) => [
+        { type: "CompanyMembers", id: companyId },
+        { type: "RecruiterCandidates", id: companyId },
+      ],
+    }),
+    removeCompanyMember: builder.mutation<CompanyActionResponse, { companyId: string; userId: string }>({
+      query: ({ companyId, userId }) => ({ url: `/companies/${companyId}/members/${userId}`, method: "DELETE" }),
+      invalidatesTags: (_result, _error, { companyId }) => [
+        { type: "CompanyMembers", id: companyId },
+        { type: "RecruiterCandidates", id: companyId },
+      ],
+    }),
     followCompany: builder.mutation<{ data: { isFollowing: boolean; followerCount: number } }, string>({
       query: (id) => ({ url: `/companies/${id}/follow`, method: "POST" }),
       invalidatesTags: (_result, _error, id) => [{ type: "Company", id }, { type: "Companies", id: "LIST" }],
@@ -57,6 +87,10 @@ export const {
   useGetCompanyJobsQuery,
   useCreateCompanyMutation,
   useUpdateCompanyMutation,
+  useGetCompanyMembersQuery,
+  useSearchRecruiterCandidatesQuery,
+  useAddCompanyMemberMutation,
+  useRemoveCompanyMemberMutation,
   useFollowCompanyMutation,
   useUnfollowCompanyMutation,
 } = companiesApi;
