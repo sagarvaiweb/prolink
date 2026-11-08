@@ -46,6 +46,19 @@ export const authApi = createApi({
       },
     }),
 
+    logout: builder.mutation<ApiResponse<Record<string, never>>, void>({
+      async queryFn(_arg, api, extraOptions) {
+        const result = await baseQueryWithReauth(
+          { url: "/auth/logout", method: "POST" },
+          api,
+          extraOptions
+        );
+        return result as
+          | { data: ApiResponse<Record<string, never>> }
+          | { error: FetchBaseQueryError };
+      },
+    }),
+
 
     verifyEmail: builder.mutation<ApiResponse<{ _id: string; email: string; isEmailVerified: boolean }>,VerifyEmailPayload>({
       query: (body) => ({
@@ -105,4 +118,4 @@ export const authApi = createApi({
 
 
 export const { useRegisterMutation, useLoginMutation , useVerifyEmailMutation, useResendVerificationMutation ,
-  useForgotPasswordMutation, useResetPasswordMutation , useGetCurrentUserQuery } = authApi;
+  useForgotPasswordMutation, useResetPasswordMutation , useGetCurrentUserQuery, useLogoutMutation } = authApi;

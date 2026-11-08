@@ -8,9 +8,12 @@ import {
   Bell,
   BriefcaseBusiness,
   CheckCheck,
+  ChevronDown,
   Home,
   LoaderCircle,
+  LogOut,
   Network,
+  UserRound,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -21,6 +24,8 @@ import {
   getNotificationErrorMessage,
 } from "@/lib/notifications";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import { clearCredentials } from "@/redux/features/auth/authSlice";
+import { authApi, useLogoutMutation } from "@/redux/features/auth/authApi";
 import { notificationsApi, useGetNotificationsQuery, useGetUnreadNotificationCountQuery, useMarkAllNotificationsReadMutation, useMarkNotificationReadMutation, useDeleteNotificationMutation } from "@/redux/features/notifications/notificationsApi";
 import type { AppNotification } from "@/types/notification.types";
 
@@ -49,16 +54,57 @@ function isNotification(value: unknown): value is AppNotification {
   );
 }
 
+function AccountAvatar({
+  src,
+  initials,
+  size = "compact",
+}: {
+  src?: string;
+  initials: string;
+  size?: "compact" | "large";
+}) {
+  const [failedSource, setFailedSource] = useState<string | null>(null);
+  const isLarge = size === "large";
+  const hasImageError = src === failedSource;
+
+  return (
+    <span
+      className={`relative isolate grid shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-[#e9d9ad] via-[#fffaf0] to-[#b99a5a] p-[2px] shadow-[0_4px_12px_rgba(15,23,42,0.16)] ${isLarge ? "h-14 w-14" : "h-9 w-9"}`}
+    >
+      {src && !hasImageError ? (
+        <img
+          src={src}
+          alt=""
+          width={isLarge ? 56 : 36}
+          height={isLarge ? 56 : 36}
+          onError={() => setFailedSource(src)}
+          className={`block h-full w-full min-h-0 min-w-0 max-h-full max-w-full rounded-full border-2 border-white object-cover object-center ${isLarge ? "ring-1 ring-slate-900/10" : ""}`}
+        />
+      ) : (
+        <span
+          className={`grid h-full w-full place-items-center rounded-full border-2 border-white bg-gradient-to-br from-slate-900 to-slate-700 font-semibold tracking-wide text-[#f4e4bd] ${isLarge ? "text-base" : "text-[11px]"}`}
+        >
+          {initials}
+        </span>
+      )}
+    </span>
+  );
+}
+
 export default function NotificationCenter() {
   const router = useRouter();
   const pathname = usePathname();
   const dispatch = useAppDispatch();
-  const accessToken = useAppSelector((state) => state.auth.accessToken);
+  const { accessToken, user } = useAppSelector((state) => state.auth);
   const isPublicPage =
     pathname === "/" || pathname === "/auth" || pathname.startsWith("/auth/");
   const shouldShowHeader = Boolean(accessToken && !isPublicPage);
   const [isOpen, setIsOpen] = useState(false);
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const accountRef = useRef<HTMLDivElement>(null);
+  const refreshInProgress = useRef(false);
+  const [logout, { isLoading: isLoggingOut }] = useLogoutMutation();
   const { data: unreadData } = useGetUnreadNotificationCountQuery(undefined, {
     skip: !shouldShowHeader,
   });
@@ -72,7 +118,7 @@ export default function NotificationCenter() {
     { page: 1, limit: RECENT_LIMIT },
     { skip: !shouldShowHeader }
   );
-  const [markRead, { isLoading: isMarkingRead }] = useMarkNotificationReadMutation();
+  const [markRead] = useMarkNotificationReadMutation();
   const [markAllRead, { isLoading: isMarkingAllRead }] = useMarkAllNotificationsReadMutation();
   const [deleteNotification, { isLoading: isDeleting }] = useDeleteNotificationMutation();
 
@@ -90,7 +136,23 @@ export default function NotificationCenter() {
     };
 
     socket.on("connect_error", (error) => {
-      console.error("Realtime notifications could not connect:", error.message);
+      if (
+        error.message === "Invalid or expired access token." &&
+        !refreshInProgress.current
+      ) {
+        refreshInProgress.current = true;
+        void dispatch(
+          authApi.endpoints.getCurrentUser.initiate(undefined, {
+            forceRefetch: true,
+            subscribe: false,
+          })
+        )
+          .unwrap()
+          .catch(() => undefined)
+          .finally(() => {
+            refreshInProgress.current = false;
+          });
+      }
     });
     socket.on("connect", refreshNotifications);
     socket.on("notification:new", (payload: unknown) => {
@@ -105,13 +167,17 @@ export default function NotificationCenter() {
   }, [accessToken, dispatch, shouldShowHeader]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen && !isAccountMenuOpen) return;
 
     const closeOnOutsideClick = (event: PointerEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) setIsOpen(false);
+      if (!accountRef.current?.contains(event.target as Node)) setIsAccountMenuOpen(false);
     };
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setIsOpen(false);
+      if (event.key === "Escape") {
+        setIsOpen(false);
+        setIsAccountMenuOpen(false);
+      }
     };
 
     document.addEventListener("pointerdown", closeOnOutsideClick);
@@ -120,7 +186,7 @@ export default function NotificationCenter() {
       document.removeEventListener("pointerdown", closeOnOutsideClick);
       document.removeEventListener("keydown", closeOnEscape);
     };
-  }, [isOpen]);
+  }, [isAccountMenuOpen, isOpen]);
 
   if (!shouldShowHeader) return null;
 
@@ -159,6 +225,27 @@ export default function NotificationCenter() {
       toast.error(getJobErrorMessage(error));
     }
   };
+
+  const signOut = async () => {
+    try {
+      await logout().unwrap();
+    } catch {
+      // Clear the local session even when the server cannot be reached.
+    } finally {
+      dispatch(clearCredentials());
+      setIsAccountMenuOpen(false);
+      router.replace("/auth/login");
+      toast.success("You have been signed out.");
+    }
+  };
+
+  const fullName = user ? `${user.firstName} ${user.lastName}`.trim() : "Your account";
+  const initials = user
+    ? `${user.firstName?.[0] ?? ""}${user.lastName?.[0] ?? ""}`.toUpperCase() || "U"
+    : "U";
+  const roleLabel = user?.role
+    ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
+    : "Member";
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 shadow-sm shadow-slate-900/[0.02] backdrop-blur-xl">
@@ -235,6 +322,54 @@ export default function NotificationCenter() {
 
               <Link href="/notifications" onClick={() => setIsOpen(false)} className="block border-t border-slate-100 px-4 py-3 text-center text-sm font-semibold text-primary-800 transition hover:bg-primary-50">View all notifications</Link>
             </section>
+          )}
+        </div>
+
+        <div className="relative ml-1" ref={accountRef}>
+          <button
+            type="button"
+            aria-label="Open account menu"
+            aria-expanded={isAccountMenuOpen}
+            aria-haspopup="menu"
+            aria-controls="account-menu"
+            onClick={() => setIsAccountMenuOpen((open) => !open)}
+            className={`group flex h-11 items-center gap-2 rounded-full border bg-white py-1 pl-1 pr-2 text-left shadow-sm transition duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 sm:gap-2.5 sm:pl-1.5 sm:pr-3 ${isAccountMenuOpen ? "border-primary-200 shadow-md shadow-primary-900/10" : "border-slate-200 hover:border-primary-200 hover:shadow-md hover:shadow-slate-900/5"}`}
+          >
+            <AccountAvatar src={user?.avatar} initials={initials} />
+            <span className="hidden max-w-28 md:block">
+              <span className="block truncate text-xs font-semibold leading-4 text-slate-800">{user?.firstName ?? "Account"}</span>
+              <span className="block text-[10px] leading-3 text-slate-500">{roleLabel}</span>
+            </span>
+            <ChevronDown size={15} className={`hidden text-slate-400 transition duration-200 sm:block ${isAccountMenuOpen ? "rotate-180 text-primary-700" : "group-hover:text-slate-600"}`} />
+          </button>
+
+          {isAccountMenuOpen && (
+            <div id="account-menu" role="menu" aria-label="Account" className="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-[min(19rem,calc(100vw-1.5rem))] overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-2 shadow-2xl shadow-slate-900/15 ring-1 ring-black/[0.02]">
+              <div className="relative overflow-hidden rounded-[1.25rem] bg-gradient-to-br from-slate-50 via-white to-primary-50/80 p-4">
+                <div aria-hidden="true" className="absolute -right-7 -top-10 h-28 w-28 rounded-full bg-primary-100/50 blur-2xl" />
+                <div className="relative flex items-center gap-3">
+                  <AccountAvatar src={user?.avatar} initials={initials} size="large" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-slate-900">{fullName}</p>
+                    <p className="mt-0.5 truncate text-xs text-slate-500">{user?.email}</p>
+                    <span className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-primary-100 bg-white/80 px-2 py-0.5 text-[10px] font-semibold text-primary-800">
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary-600" />
+                      {roleLabel}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <Link href="/profile" role="menuitem" onClick={() => setIsAccountMenuOpen(false)} className="group mt-2 flex items-center gap-3 rounded-2xl px-3 py-3 text-sm font-medium text-slate-700 transition hover:bg-primary-50/80 hover:text-primary-900 focus-visible:outline-2 focus-visible:outline-primary-700">
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-slate-600 transition group-hover:bg-white group-hover:text-primary-800"><UserRound size={17} /></span>
+                <span className="flex-1">View profile<span className="mt-0.5 block text-xs font-normal text-slate-500">Manage your professional profile</span></span>
+                <ChevronDown size={15} className="-rotate-90 text-slate-400 transition group-hover:translate-x-0.5 group-hover:text-primary-700" />
+              </Link>
+              <div className="mx-2 my-1 border-t border-slate-100" />
+              <button type="button" role="menuitem" disabled={isLoggingOut} onClick={() => void signOut()} className="group flex w-full items-center gap-3 rounded-2xl px-3 py-3 text-sm font-semibold text-slate-600 transition hover:bg-rose-50 hover:text-rose-700 focus-visible:outline-2 focus-visible:outline-rose-600 disabled:cursor-wait disabled:opacity-60">
+                <span className="grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-slate-500 transition group-hover:bg-white group-hover:text-rose-600">{isLoggingOut ? <LoaderCircle size={17} className="animate-spin" /> : <LogOut size={17} />}</span>
+                <span>{isLoggingOut ? "Signing out…" : "Sign out"}</span>
+              </button>
+            </div>
           )}
         </div>
       </div>
