@@ -7,6 +7,7 @@ import { postsApi } from "./features/posts/postsApi";
 import { jobsApi } from "./features/jobs/jobsApi";
 import { applicationsApi } from "./features/jobs/applicationsApi";
 import { notificationsApi } from "./features/notifications/notificationsApi";
+import { dashboardApi } from "./features/dashboard/dashboardApi";
 
 export const store = configureStore({
   reducer: {
@@ -18,6 +19,7 @@ export const store = configureStore({
     [jobsApi.reducerPath]: jobsApi.reducer,
     [applicationsApi.reducerPath]: applicationsApi.reducer,
     [notificationsApi.reducerPath]: notificationsApi.reducer,
+    [dashboardApi.reducerPath]: dashboardApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
@@ -27,7 +29,8 @@ export const store = configureStore({
       postsApi.middleware,
       jobsApi.middleware,
       applicationsApi.middleware,
-      notificationsApi.middleware
+      notificationsApi.middleware,
+      dashboardApi.middleware
     ),
 });
 
