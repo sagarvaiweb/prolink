@@ -2,6 +2,7 @@ import { createApi } from "@reduxjs/toolkit/query/react";
 import { baseQueryWithReauth } from "@/redux/baseQuery";
 import type {
   ApplicationsSummaryResponse,
+  AdminPlatformStatsResponse,
   DashboardRange,
   NetworkGrowthResponse,
   PostEngagementResponse,
@@ -41,6 +42,12 @@ export const dashboardApi = createApi({
     getRecruiterJobFunnel: builder.query<RecruiterJobFunnelResponse, string>({
       query: (jobId) => `/dashboard/recruiter/${jobId}/funnel`,
     }),
+    getAdminPlatformStats: builder.query<AdminPlatformStatsResponse, DashboardRange>({
+      query: (range) => ({
+        url: "/dashboard/admin/platform-stats",
+        params: { range },
+      }),
+    }),
   }),
 });
 
@@ -51,4 +58,5 @@ export const {
   useGetApplicationsSummaryQuery,
   useGetRecruiterJobsOverviewQuery,
   useGetRecruiterJobFunnelQuery,
+  useGetAdminPlatformStatsQuery,
 } = dashboardApi;

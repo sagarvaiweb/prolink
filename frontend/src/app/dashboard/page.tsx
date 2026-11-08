@@ -11,6 +11,7 @@ import {
   MessageSquareText,
   PenLine,
   RefreshCw,
+  ShieldCheck,
   Sparkles,
   UsersRound,
 } from "lucide-react";
@@ -196,6 +197,11 @@ export default function DashboardPage() {
                       {user?.role === "recruiter" && (
                         <Link href="/recruiter/dashboard" className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10">
                           Recruiter analytics <BriefcaseBusiness size={16} />
+                        </Link>
+                      )}
+                      {user?.role === "admin" && (
+                        <Link href="/admin/dashboard" className="inline-flex items-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-white/10">
+                          Admin overview <ShieldCheck size={16} />
                         </Link>
                       )}
                     </div>

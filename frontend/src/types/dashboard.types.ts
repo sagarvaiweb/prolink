@@ -70,9 +70,28 @@ export interface RecruiterJobFunnel {
   byStatus: Record<ApplicationStatus, number>;
 }
 
+export interface AdminPlatformStats {
+  totals: {
+    users: number;
+    posts: number;
+    jobs: number;
+    activeUsersToday: number;
+  };
+  range: DashboardRange;
+  series: Array<{
+    date: string;
+    totalUsers: number;
+    newUsers: number;
+    totalPosts: number;
+    totalJobs: number;
+    activeUsers: number;
+  }>;
+}
+
 export type ProfileViewsResponse = ApiResponse<ProfileViewsAnalytics>;
 export type PostEngagementResponse = ApiResponse<PostEngagementAnalytics>;
 export type NetworkGrowthResponse = ApiResponse<NetworkGrowthAnalytics>;
 export type ApplicationsSummaryResponse = ApiResponse<ApplicationsSummary>;
 export type RecruiterJobsOverviewResponse = ApiResponse<RecruiterJobsOverview>;
 export type RecruiterJobFunnelResponse = ApiResponse<RecruiterJobFunnel>;
+export type AdminPlatformStatsResponse = ApiResponse<AdminPlatformStats>;
