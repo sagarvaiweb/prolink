@@ -1,12 +1,17 @@
 import { Router } from "express";
 import authenticateUser from "../../middlewares/authenticateUser.middleware.js";
 import validateQuery from "../../middlewares/validateQuery.middleware.js";
+import authorizeRole from "../../middlewares/authorizeRoles.middleware.js";
+import validateParams from "../../middlewares/validateParams.middleware.js";
+import { jobIdParamsSchema } from "../job/job.validation.js";
 import { dashboardRangeQuerySchema } from "./dashboard.validation.js";
 import {
   getApplicationsSummary,
   getNetworkGrowthStats,
   getPostEngagementStats,
   getProfileViewStats,
+  getRecruiterJobFunnel,
+  getRecruiterJobsOverview,
 } from "./dashboard.controller.js";
 
 const router = Router();
@@ -30,6 +35,17 @@ router.get(
   "/applications-summary",
   validateQuery(dashboardRangeQuerySchema),
   getApplicationsSummary
+);
+router.get(
+  "/recruiter/:jobId/funnel",
+  authorizeRole("recruiter"),
+  validateParams(jobIdParamsSchema),
+  getRecruiterJobFunnel
+);
+router.get(
+  "/recruiter/jobs-overview",
+  authorizeRole("recruiter"),
+  getRecruiterJobsOverview
 );
 
 export default router;

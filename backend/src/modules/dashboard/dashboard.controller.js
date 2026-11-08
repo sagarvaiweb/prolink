@@ -1,6 +1,7 @@
 import asyncHandler from "../../utils/asyncHandler.js";
 import ApiResponse from "../../utils/ApiResponse.js";
 import * as analyticsService from "./analytics.service.js";
+import * as recruiterAnalyticsService from "./recruiterAnalytics.service.js";
 
 const getRange = (req) => req.query.range || "30d";
 
@@ -22,4 +23,21 @@ export const getNetworkGrowthStats = asyncHandler(async (req, res) => {
 export const getApplicationsSummary = asyncHandler(async (req, res) => {
   const data = await analyticsService.getApplicationsSummary(req.user);
   res.status(200).json(new ApiResponse(200, data, "Application summary fetched successfully."));
+});
+
+export const getRecruiterJobFunnel = asyncHandler(async (req, res) => {
+  const data = await recruiterAnalyticsService.getJobFunnel(
+    req.user,
+    req.params.jobId
+  );
+  res
+    .status(200)
+    .json(new ApiResponse(200, data, "Job application funnel fetched successfully."));
+});
+
+export const getRecruiterJobsOverview = asyncHandler(async (req, res) => {
+  const data = await recruiterAnalyticsService.getJobsOverview(req.user);
+  res
+    .status(200)
+    .json(new ApiResponse(200, data, "Recruiter job analytics fetched successfully."));
 });

@@ -2,6 +2,7 @@ import { Job } from "../../models/Job.model.js";
 import { SavedJob } from "../../models/SavedJob.model.js";
 import { Application } from "../../models/Application.model.js";
 import { User } from "../../models/User.model.js";
+import { JobView } from "../../models/JobView.model.js";
 import ApiError from "../../utils/ApiError.js";
 import { notifyJobRemoved } from "../notification/notification.service.js";
 
@@ -106,6 +107,9 @@ export const getJobById = async (user, jobId) => {
   ) {
     throw new ApiError(404, "Job listing not found.");
   }
+  if (!job.postedBy._id.equals(user._id)) {
+    await JobView.create({ job: job._id, viewer: user._id });
+  }
   const isSaved = Boolean(await SavedJob.exists({ user: user._id, job: job._id }));
   return { ...job.toObject(), isSaved };
 };
@@ -147,6 +151,7 @@ export const deleteJob = async (user, jobId) => {
     job.deleteOne(),
     SavedJob.deleteMany({ job: job._id }),
     Application.deleteMany({ job: job._id }),
+    JobView.deleteMany({ job: job._id }),
   ]);
 };
 
@@ -164,6 +169,7 @@ export const removeJobByAdmin = async (admin, jobId) => {
     Job.deleteOne({ _id: job._id }),
     SavedJob.deleteMany({ job: job._id }),
     Application.deleteMany({ job: job._id }),
+    JobView.deleteMany({ job: job._id }),
   ]);
 
   await notifyJobRemoved({
