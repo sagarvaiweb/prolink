@@ -7,10 +7,13 @@ import { postsApi } from "./features/posts/postsApi";
 import { jobsApi } from "./features/jobs/jobsApi";
 import { applicationsApi } from "./features/jobs/applicationsApi";
 import { notificationsApi } from "./features/notifications/notificationsApi";
+import companiesReducer from "./features/companies/companiesSlice";
+import { companiesApi } from "./features/companies/companiesApi";
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
+    companies: companiesReducer,
     [authApi.reducerPath]: authApi.reducer,
     [profileApi.reducerPath]: profileApi.reducer,
     [networkApi.reducerPath]: networkApi.reducer,
@@ -18,6 +21,7 @@ export const store = configureStore({
     [jobsApi.reducerPath]: jobsApi.reducer,
     [applicationsApi.reducerPath]: applicationsApi.reducer,
     [notificationsApi.reducerPath]: notificationsApi.reducer,
+    [companiesApi.reducerPath]: companiesApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
@@ -27,7 +31,8 @@ export const store = configureStore({
       postsApi.middleware,
       jobsApi.middleware,
       applicationsApi.middleware,
-      notificationsApi.middleware
+      notificationsApi.middleware,
+      companiesApi.middleware
     ),
 });
 

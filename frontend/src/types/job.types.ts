@@ -68,6 +68,10 @@ export interface JobPayload {
   salaryRange: string | null;
 }
 
+export interface CreateJobPayload extends JobPayload {
+  companyId: string;
+}
+
 export interface UpdateJobPayload {
   jobId: string;
   data: Partial<JobPayload>;

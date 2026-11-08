@@ -90,6 +90,12 @@ export default function RecruiterJobsPage() {
               >
                 Browse jobs
               </Link>
+              <Link
+                href="/companies"
+                className="text-sm font-medium text-slate-500 transition hover:text-primary-800"
+              >
+                Companies
+              </Link>
             </div>
 
             <header className="mb-6 flex flex-col gap-5 rounded-3xl bg-linear-to-br from-primary-950 via-primary-800 to-primary-700 p-6 text-white shadow-lg shadow-primary-950/10 sm:flex-row sm:items-center sm:justify-between sm:p-8">
