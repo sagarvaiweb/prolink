@@ -3,6 +3,7 @@ import authenticateUser from "../../middlewares/authenticateUser.middleware.js";
 import authorizeRole from "../../middlewares/authorizeRoles.middleware.js";
 import validateParams from "../../middlewares/validateParams.middleware.js";
 import requireCompanyRole from "../../middlewares/requireCompanyRole.middleware.js";
+import { uploadCompanyLogo } from "../../middlewares/upload.middleware.js";
 import {
   createCompany,
   addCompanyMember,
@@ -57,6 +58,7 @@ router.patch(
 router.post(
   "/",
   authorizeRole("recruiter"),
+  uploadCompanyLogo.single("logo"),
   validateCompanyBody(createCompanySchema),
   createCompany
 );
@@ -111,6 +113,7 @@ router.patch(
   "/:companyId",
   validateParams(companyIdParamsSchema),
   requireCompanyRole("owner", "admin"),
+  uploadCompanyLogo.single("logo"),
   validateCompanyBody(updateCompanySchema),
   updateCompany
 );

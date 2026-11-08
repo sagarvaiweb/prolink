@@ -59,11 +59,11 @@ export const companiesApi = createApi({
       query: ({ companyId, page, limit }) => ({ url: `/companies/${companyId}/jobs`, params: { page, limit } }),
       providesTags: (_result, _error, { companyId }) => [{ type: "CompanyJobs", id: companyId }],
     }),
-    createCompany: builder.mutation<CompanyMutationResponse, CompanyPayload>({
+    createCompany: builder.mutation<CompanyMutationResponse, CompanyPayload | FormData>({
       query: (body) => ({ url: "/companies", method: "POST", body }),
       invalidatesTags: [{ type: "Companies", id: "LIST" }],
     }),
-    updateCompany: builder.mutation<CompanyMutationResponse, { companyId: string; data: Partial<CompanyPayload> }>({
+    updateCompany: builder.mutation<CompanyMutationResponse, { companyId: string; data: Partial<CompanyPayload> | FormData }>({
       query: ({ companyId, data }) => ({ url: `/companies/${companyId}`, method: "PATCH", body: data }),
       invalidatesTags: (_result, _error, { companyId }) => [
         { type: "Company", id: companyId },

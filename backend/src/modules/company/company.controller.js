@@ -3,7 +3,11 @@ import ApiResponse from "../../utils/ApiResponse.js";
 import * as companyService from "./company.service.js";
 
 export const createCompany = asyncHandler(async (req, res) => {
-  const result = await companyService.createCompany(req.user, req.body);
+  const result = await companyService.createCompany(req.user, {
+    ...req.body,
+    ...(req.body.website === "" ? { website: null } : {}),
+    ...(req.file ? { logo: req.file.path } : {}),
+  });
   res
     .status(201)
     .json(new ApiResponse(201, result, "Company created successfully."));
@@ -24,10 +28,15 @@ export const searchCompanies = asyncHandler(async (req, res) => {
 });
 
 export const updateCompany = asyncHandler(async (req, res) => {
+  const updates = {
+    ...req.body,
+    ...(req.body.website === "" ? { website: null } : {}),
+    ...(req.file ? { logo: req.file.path } : {}),
+  };
   const result = await companyService.updateCompany(
     req.user,
     req.params.companyId,
-    req.body
+    updates
   );
   res
     .status(200)
