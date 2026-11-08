@@ -109,6 +109,28 @@ export const notifyNewFollower = async ({ follower, recipientId }) => {
   ]);
 };
 
+export const notifyCompanyMemberAdded = async ({
+  addedBy,
+  memberId,
+  memberRole,
+  company,
+}) => {
+  const actorName = [addedBy.firstName, addedBy.lastName]
+    .filter(Boolean)
+    .join(" ");
+
+  await createNotifications([
+    {
+      recipient: memberId,
+      actor: addedBy._id,
+      type: "company_recruiter_added",
+      title: "Added to a company team",
+      message: `${actorName || "A company manager"} added you as ${memberRole === "admin" ? "a company admin" : "a recruiter"} to ${company.name}.`,
+      relatedCompanyId: company._id,
+    },
+  ]);
+};
+
 export const notifyPostLike = async ({ actor, post }) => {
   const recipientId = post.author?._id ?? post.author;
   if (String(recipientId) === String(actor._id)) return;

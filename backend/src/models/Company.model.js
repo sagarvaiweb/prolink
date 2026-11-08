@@ -69,6 +69,12 @@ const companySchema = new Schema(
       min: 0,
       default: 0,
     },
+    ownerCount: {
+      type: Number,
+      min: 1,
+      default: 1,
+      required: true,
+    },
   },
   {
     timestamps: true,

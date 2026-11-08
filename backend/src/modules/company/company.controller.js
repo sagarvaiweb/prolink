@@ -33,3 +33,37 @@ export const updateCompany = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, result, "Company updated successfully."));
 });
+
+export const addCompanyMember = asyncHandler(async (req, res) => {
+  const member = await companyService.addCompanyMember(
+    req.user,
+    req.params.companyId,
+    req.body.userId,
+    req.body.role
+  );
+  res
+    .status(201)
+    .json(new ApiResponse(201, member, "Recruiter added to company successfully."));
+});
+
+export const removeCompanyMember = asyncHandler(async (req, res) => {
+  await companyService.removeCompanyMember(
+    req.user,
+    req.params.companyId,
+    req.params.userId
+  );
+  res
+    .status(200)
+    .json(new ApiResponse(200, null, "Company member removed successfully."));
+});
+
+export const getCompanyMembers = asyncHandler(async (req, res) => {
+  const result = await companyService.getCompanyMembers(
+    req.user,
+    req.params.companyId,
+    req.validatedQuery
+  );
+  res
+    .status(200)
+    .json(new ApiResponse(200, result, "Company members fetched successfully."));
+});

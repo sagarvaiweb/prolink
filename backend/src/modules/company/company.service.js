@@ -1,9 +1,12 @@
 import mongoose from "mongoose";
 import { Company } from "../../models/Company.model.js";
 import { CompanyMember } from "../../models/CompanyMember.model.js";
+import { User } from "../../models/User.model.js";
 import ApiError from "../../utils/ApiError.js";
+import { notifyCompanyMemberAdded } from "../notification/notification.service.js";
 
 const COMPANY_CREATOR_FIELDS = "firstName lastName username avatar";
+const MEMBER_USER_FIELDS = "firstName lastName username avatar role";
 
 const ensureActive = (user) => {
   if (user.accountStatus !== "active") {
@@ -158,5 +161,145 @@ export const updateCompany = async (user, companyId, updates) => {
       .populate("createdBy", COMPANY_CREATOR_FIELDS)
       .lean(),
     viewerRole: membership.role,
+  };
+};
+
+const getActiveCompany = async (companyId) => {
+  const company = await Company.findOne({ _id: companyId, isSuspended: false });
+  if (!company) throw new ApiError(404, "Company not found.");
+  return company;
+};
+
+const ensureCanManageMembers = async (user, companyId) => {
+  ensureActive(user);
+  const company = await getActiveCompany(companyId);
+  const managerMembership = await CompanyMember.findOne({
+    company: company._id,
+    user: user._id,
+    role: { $in: ["owner", "admin"] },
+  })
+    .select("role")
+    .lean();
+
+  if (!managerMembership) {
+    throw new ApiError(403, "You don't have permission to manage this company.");
+  }
+
+  return { company, managerMembership };
+};
+
+export const addCompanyMember = async (
+  manager,
+  companyId,
+  memberId,
+  role = "recruiter"
+) => {
+  const { company, managerMembership } = await ensureCanManageMembers(
+    manager,
+    companyId
+  );
+  if (!["admin", "recruiter"].includes(role)) {
+    throw new ApiError(400, "Company member role is invalid.");
+  }
+  if (role === "admin" && managerMembership.role !== "owner") {
+    throw new ApiError(403, "Only a company owner can assign the admin role.");
+  }
+
+  const member = await User.findById(memberId).select("_id role accountStatus");
+
+  if (!member) throw new ApiError(404, "User account not found.");
+  if (member.role !== "recruiter") {
+    throw new ApiError(403, "Only recruiter accounts can join a company team.");
+  }
+  if (member.accountStatus !== "active") {
+    throw new ApiError(403, "The recruiter account is not active.");
+  }
+
+  try {
+    const companyMember = await CompanyMember.create({
+      company: company._id,
+      user: member._id,
+      role,
+    });
+
+    await notifyCompanyMemberAdded({
+      addedBy: manager,
+      memberId: member._id,
+      memberRole: role,
+      company,
+    });
+
+    return companyMember.populate("user", MEMBER_USER_FIELDS);
+  } catch (error) {
+    if (error?.code === 11000) {
+      throw new ApiError(409, "This recruiter is already a member of the company.");
+    }
+    throw error;
+  }
+};
+
+export const removeCompanyMember = async (manager, companyId, memberId) => {
+  const { company } = await ensureCanManageMembers(manager, companyId);
+  const membership = await CompanyMember.findOne({
+    company: company._id,
+    user: memberId,
+  });
+
+  if (!membership) throw new ApiError(404, "Company member not found.");
+
+  const isOwner = membership.role === "owner";
+  if (isOwner) {
+    const ownerCountUpdate = await Company.updateOne(
+      { _id: company._id, ownerCount: { $gt: 1 } },
+      { $inc: { ownerCount: -1 } }
+    );
+    if (ownerCountUpdate.modifiedCount !== 1) {
+      throw new ApiError(400, "A company must have at least one owner.");
+    }
+  }
+
+  try {
+    const deletion = await CompanyMember.deleteOne({ _id: membership._id });
+    if (deletion.deletedCount !== 1) {
+      throw new ApiError(404, "Company member not found.");
+    }
+  } catch (error) {
+    if (isOwner) {
+      try {
+        await Company.updateOne(
+          { _id: company._id },
+          { $inc: { ownerCount: 1 } }
+        );
+      } catch (rollbackError) {
+        console.error("Failed to restore company owner count.", rollbackError);
+      }
+    }
+    throw error;
+  }
+};
+
+export const getCompanyMembers = async (user, companyId, query) => {
+  ensureActive(user);
+  const company = await getActiveCompany(companyId);
+  const { page, limit, skip } = getPagination(query);
+
+  const [members, total] = await Promise.all([
+    CompanyMember.find({ company: company._id })
+      .populate("user", MEMBER_USER_FIELDS)
+      .sort({ addedAt: 1, _id: 1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    CompanyMember.countDocuments({ company: company._id }),
+  ]);
+
+  return {
+    members: members.filter(({ user: memberUser }) => memberUser),
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
   };
 };

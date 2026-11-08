@@ -14,6 +14,20 @@ const companyFields = {
 };
 
 export const companyIdParamsSchema = Joi.object({ companyId: objectId });
+export const companyMemberParamsSchema = Joi.object({
+  companyId: objectId,
+  userId: objectId,
+});
+
+export const addCompanyMemberSchema = Joi.object({
+  userId: objectId,
+  role: Joi.string().valid("admin", "recruiter").default("recruiter"),
+}).unknown(false);
+
+export const companyMembersQuerySchema = Joi.object({
+  page: Joi.number().integer().min(1).max(100000).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(50),
+}).unknown(false);
 
 export const createCompanySchema = Joi.object({
   ...companyFields,
@@ -52,6 +66,24 @@ export const validateCompanyBody = (schema) => (req, _res, next) => {
 
 export const validateCompanyQuery = (req, _res, next) => {
   const { error, value } = companyListQuerySchema.validate(req.query, {
+    abortEarly: false,
+    convert: true,
+  });
+
+  if (error) {
+    throw new ApiError(
+      400,
+      "Validation failed",
+      error.details.map(({ message }) => message)
+    );
+  }
+
+  req.validatedQuery = value;
+  next();
+};
+
+export const validateCompanyMembersQuery = (req, _res, next) => {
+  const { error, value } = companyMembersQuerySchema.validate(req.query, {
     abortEarly: false,
     convert: true,
   });
