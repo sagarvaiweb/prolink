@@ -112,6 +112,9 @@ export default function AdminJobsPage() {
               <Link href="/jobs" className="text-sm font-medium text-slate-500 transition hover:text-primary-800">
                 Browse public jobs
               </Link>
+              <Link href="/admin/companies" className="text-sm font-medium text-slate-500 transition hover:text-primary-800">
+                Company review
+              </Link>
             </div>
 
             <header className="mb-6 rounded-3xl bg-linear-to-br from-primary-950 via-primary-800 to-primary-700 p-6 text-white shadow-lg shadow-primary-950/10 sm:p-8">

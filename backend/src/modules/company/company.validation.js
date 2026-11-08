@@ -55,6 +55,7 @@ export const companyListQuerySchema = Joi.object({
   search: Joi.string().trim().max(100),
   industry: Joi.string().trim().max(100),
   companySize: companyFields.companySize,
+  isVerified: Joi.boolean(),
 }).unknown(false);
 
 export const validateCompanyBody = (schema) => (req, _res, next) => {

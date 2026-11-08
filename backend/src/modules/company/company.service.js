@@ -112,6 +112,7 @@ export const searchCompanies = async (user, query) => {
 
   const { page, limit, skip } = getPagination(query);
   const filter = { isSuspended: false };
+  if (query.isVerified !== undefined) filter.isVerified = query.isVerified;
   if (query.industry) filter.industry = new RegExp(`^${escapeRegex(query.industry)}$`, "i");
   if (query.companySize) filter.companySize = query.companySize;
   if (query.search) {

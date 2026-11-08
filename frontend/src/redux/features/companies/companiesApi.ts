@@ -9,6 +9,8 @@ import type {
   CompanyMemberResponse,
   CompanyActionResponse,
   CompanyRole,
+  CompanyStatusChangeResponse,
+  CompanyVerificationResponse,
   CompanyPayload,
   CompanyProfileResponse,
   RecruiterCandidatesResponse,
@@ -17,13 +19,36 @@ import type {
 export const companiesApi = createApi({
   reducerPath: "companiesApi",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["Companies", "Company", "CompanyJobs", "CompanyMembers", "RecruiterCandidates"],
+  tagTypes: ["Companies", "Company", "CompanyJobs", "CompanyMembers", "RecruiterCandidates", "CompanyVerification"],
   endpoints: (builder) => ({
     searchCompanies: builder.query<CompanyListResponse, CompanyListParams>({
       query: (params) => ({ url: "/companies", params }),
       providesTags: (result) => [
         { type: "Companies", id: "LIST" },
         ...(result?.data.companies.map(({ _id }) => ({ type: "Company" as const, id: _id })) ?? []),
+      ],
+    }),
+    getPendingCompanies: builder.query<CompanyListResponse, Omit<CompanyListParams, "isVerified">>({
+      query: (params) => ({ url: "/companies/admin/pending", params }),
+      providesTags: (result) => [
+        { type: "CompanyVerification", id: "PENDING" },
+        ...(result?.data.companies.map(({ _id }) => ({ type: "Company" as const, id: _id })) ?? []),
+      ],
+    }),
+    verifyCompany: builder.mutation<CompanyVerificationResponse, string>({
+      query: (companyId) => ({ url: "/companies/admin/" + companyId + "/verify", method: "PATCH" }),
+      invalidatesTags: (_result, _error, companyId) => [
+        { type: "CompanyVerification", id: "PENDING" },
+        { type: "Company", id: companyId },
+        { type: "Companies", id: "LIST" },
+      ],
+    }),
+    suspendCompany: builder.mutation<CompanyStatusChangeResponse, string>({
+      query: (companyId) => ({ url: "/companies/admin/" + companyId + "/suspend", method: "PATCH" }),
+      invalidatesTags: (_result, _error, companyId) => [
+        { type: "CompanyVerification", id: "PENDING" },
+        { type: "Company", id: companyId },
+        { type: "Companies", id: "LIST" },
       ],
     }),
     getCompanyById: builder.query<CompanyProfileResponse, string>({
@@ -83,6 +108,9 @@ export const companiesApi = createApi({
 
 export const {
   useSearchCompaniesQuery,
+  useGetPendingCompaniesQuery,
+  useVerifyCompanyMutation,
+  useSuspendCompanyMutation,
   useGetCompanyByIdQuery,
   useGetCompanyJobsQuery,
   useCreateCompanyMutation,

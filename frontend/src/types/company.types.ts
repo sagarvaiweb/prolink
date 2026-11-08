@@ -39,6 +39,12 @@ export interface CompanyListParams {
   search?: string;
   industry?: string;
   companySize?: CompanySize;
+  isVerified?: boolean;
+}
+
+export interface CompanyStatusChangeData {
+  company: Company;
+  closedJobCount?: number;
 }
 
 export type CompanyPagination = JobPagination;
@@ -91,3 +97,5 @@ export type CompanyMembersResponse = ApiResponse<CompanyMembersData>;
 export type RecruiterCandidatesResponse = ApiResponse<RecruiterCandidatesData>;
 export type CompanyMemberResponse = ApiResponse<CompanyMember>;
 export type CompanyActionResponse = ApiResponse<null>;
+export type CompanyStatusChangeResponse = ApiResponse<CompanyStatusChangeData>;
+export type CompanyVerificationResponse = ApiResponse<Company>;
