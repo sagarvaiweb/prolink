@@ -67,3 +67,33 @@ export const getCompanyMembers = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, result, "Company members fetched successfully."));
 });
+
+export const getCompaniesForVerification = asyncHandler(async (req, res) => {
+  const result = await companyService.getCompaniesForVerification(
+    req.user,
+    req.validatedQuery
+  );
+  res
+    .status(200)
+    .json(new ApiResponse(200, result, "Companies awaiting verification fetched successfully."));
+});
+
+export const verifyCompany = asyncHandler(async (req, res) => {
+  const company = await companyService.verifyCompany(
+    req.user,
+    req.params.companyId
+  );
+  res
+    .status(200)
+    .json(new ApiResponse(200, company, "Company verified successfully."));
+});
+
+export const suspendCompany = asyncHandler(async (req, res) => {
+  const result = await companyService.suspendCompany(
+    req.user,
+    req.params.companyId
+  );
+  res
+    .status(200)
+    .json(new ApiResponse(200, result, "Company suspended successfully."));
+});

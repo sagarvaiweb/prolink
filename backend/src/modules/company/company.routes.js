@@ -6,11 +6,14 @@ import requireCompanyRole from "../../middlewares/requireCompanyRole.middleware.
 import {
   createCompany,
   addCompanyMember,
+  getCompaniesForVerification,
   getCompanyById,
   getCompanyMembers,
   removeCompanyMember,
+  suspendCompany,
   searchCompanies,
   updateCompany,
+  verifyCompany,
 } from "./company.controller.js";
 import {
   companyIdParamsSchema,
@@ -27,6 +30,24 @@ const router = Router();
 
 router.use(authenticateUser);
 router.get("/", validateCompanyQuery, searchCompanies);
+router.get(
+  "/admin/pending",
+  authorizeRole("admin"),
+  validateCompanyQuery,
+  getCompaniesForVerification
+);
+router.patch(
+  "/admin/:companyId/verify",
+  authorizeRole("admin"),
+  validateParams(companyIdParamsSchema),
+  verifyCompany
+);
+router.patch(
+  "/admin/:companyId/suspend",
+  authorizeRole("admin"),
+  validateParams(companyIdParamsSchema),
+  suspendCompany
+);
 router.post(
   "/",
   authorizeRole("recruiter"),

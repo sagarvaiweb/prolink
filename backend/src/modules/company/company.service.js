@@ -2,8 +2,12 @@ import mongoose from "mongoose";
 import { Company } from "../../models/Company.model.js";
 import { CompanyMember } from "../../models/CompanyMember.model.js";
 import { User } from "../../models/User.model.js";
+import { Job } from "../../models/Job.model.js";
 import ApiError from "../../utils/ApiError.js";
-import { notifyCompanyMemberAdded } from "../notification/notification.service.js";
+import {
+  notifyCompanyMemberAdded,
+  notifyCompanyStatusChanged,
+} from "../notification/notification.service.js";
 
 const COMPANY_CREATOR_FIELDS = "firstName lastName username avatar";
 const MEMBER_USER_FIELDS = "firstName lastName username avatar role";
@@ -79,14 +83,14 @@ export const getCompanyById = async (user, companyId) => {
     throw new ApiError(400, "Invalid company ID.");
   }
 
-  const company = await Company.findOne({
-    _id: companyId,
-    isSuspended: false,
-  })
+  const company = await Company.findById(companyId)
     .populate("createdBy", COMPANY_CREATOR_FIELDS)
     .lean();
 
   if (!company) throw new ApiError(404, "Company not found.");
+  if (company.isSuspended && user.role !== "admin") {
+    throw new ApiError(404, "Company not found.");
+  }
 
   const membership = await CompanyMember.findOne({
     company: company._id,
@@ -302,4 +306,106 @@ export const getCompanyMembers = async (user, companyId, query) => {
       totalPages: Math.ceil(total / limit),
     },
   };
+};
+
+export const getCompaniesForVerification = async (admin, query) => {
+  ensureActive(admin);
+  if (admin.role !== "admin") throw new ApiError(403, "Admin access required.");
+
+  const { page, limit, skip } = getPagination(query);
+  const filter = { isVerified: false, isSuspended: false };
+  if (query.industry) {
+    filter.industry = new RegExp(`^${escapeRegex(query.industry)}$`, "i");
+  }
+  if (query.companySize) filter.companySize = query.companySize;
+  if (query.search) {
+    const search = new RegExp(escapeRegex(query.search.trim()), "i");
+    filter.$or = [
+      { name: search },
+      { industry: search },
+      { location: search },
+    ];
+  }
+  const [companies, total] = await Promise.all([
+    Company.find(filter)
+      .populate("createdBy", COMPANY_CREATOR_FIELDS)
+      .sort({ createdAt: 1, _id: 1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Company.countDocuments(filter),
+  ]);
+
+  return {
+    companies,
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+};
+
+const getCompanyMemberIds = async (companyId) =>
+  CompanyMember.distinct("user", { company: companyId });
+
+export const verifyCompany = async (admin, companyId) => {
+  ensureActive(admin);
+  if (admin.role !== "admin") throw new ApiError(403, "Admin access required.");
+
+  const company = await Company.findById(companyId);
+  if (!company) throw new ApiError(404, "Company not found.");
+  if (company.isSuspended) {
+    throw new ApiError(409, "A suspended company cannot be verified.");
+  }
+  if (company.isVerified) {
+    throw new ApiError(409, "Company has already been verified.");
+  }
+
+  company.isVerified = true;
+  await company.save();
+
+  const memberIds = await getCompanyMemberIds(company._id);
+  await notifyCompanyStatusChanged({
+    admin,
+    company,
+    memberIds,
+    isVerified: true,
+  });
+
+  return company;
+};
+
+export const suspendCompany = async (admin, companyId) => {
+  ensureActive(admin);
+  if (admin.role !== "admin") throw new ApiError(403, "Admin access required.");
+
+  const company = await Company.findById(companyId);
+  if (!company) throw new ApiError(404, "Company not found.");
+
+  const wasAlreadySuspended = company.isSuspended;
+  if (!wasAlreadySuspended) {
+    company.isSuspended = true;
+    await company.save();
+  }
+
+  // Company state is the source of truth for reads and new posts; close its
+  // open jobs as well so the normal job lifecycle reflects the suspension.
+  const jobsUpdate = await Job.updateMany(
+    { postedByCompany: company._id, status: "open" },
+    { $set: { status: "closed" } }
+  );
+
+  if (!wasAlreadySuspended) {
+    const memberIds = await getCompanyMemberIds(company._id);
+    await notifyCompanyStatusChanged({
+      admin,
+      company,
+      memberIds,
+      isVerified: false,
+    });
+  }
+
+  return { company, closedJobCount: jobsUpdate.modifiedCount };
 };

@@ -32,7 +32,10 @@ export const moderationReviewSchema = Joi.object({
   }),
 }).unknown(false);
 
-export const createJobSchema = Joi.object(jobFields).fork(
+export const createJobSchema = Joi.object({
+  ...jobFields,
+  companyId: Joi.string().hex().length(24).required(),
+}).fork(
   ["title", "description", "requiredSkills", "experienceLevel", "jobType", "location"],
   (schema) => schema.required()
 ).unknown(false);
