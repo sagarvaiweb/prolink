@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import { Company } from "../../models/Company.model.js";
 import { CompanyMember } from "../../models/CompanyMember.model.js";
+import { CompanyFollow } from "../../models/CompanyFollow.model.js";
+import { SavedJob } from "../../models/SavedJob.model.js";
 import { User } from "../../models/User.model.js";
 import { Job } from "../../models/Job.model.js";
 import ApiError from "../../utils/ApiError.js";
@@ -98,8 +100,11 @@ export const getCompanyById = async (user, companyId) => {
   })
     .select("role")
     .lean();
+  const isFollowing = Boolean(
+    await CompanyFollow.exists({ company: company._id, user: user._id })
+  );
 
-  return { company, viewerRole: membership?.role ?? null };
+  return { company, viewerRole: membership?.role ?? null, isFollowing };
 };
 
 export const searchCompanies = async (user, query) => {
@@ -127,9 +132,19 @@ export const searchCompanies = async (user, query) => {
       .lean(),
     Company.countDocuments(filter),
   ]);
+  const followedCompanyIds = companies.length
+    ? await CompanyFollow.distinct("company", {
+        user: user._id,
+        company: { $in: companies.map(({ _id }) => _id) },
+      })
+    : [];
+  const followedCompanyIdSet = new Set(followedCompanyIds.map(String));
 
   return {
-    companies,
+    companies: companies.map((company) => ({
+      ...company,
+      isFollowing: followedCompanyIdSet.has(String(company._id)),
+    })),
     pagination: {
       total,
       page,
@@ -299,6 +314,121 @@ export const getCompanyMembers = async (user, companyId, query) => {
 
   return {
     members: members.filter(({ user: memberUser }) => memberUser),
+    pagination: {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
+};
+
+export const followCompany = async (user, companyId) => {
+  ensureActive(user);
+  const company = await getActiveCompany(companyId);
+
+  try {
+    await CompanyFollow.create({ company: company._id, user: user._id });
+  } catch (error) {
+    if (error?.code !== 11000) throw error;
+    const currentCompany = await Company.findById(company._id)
+      .select("followerCount")
+      .lean();
+    return {
+      isFollowing: true,
+      followerCount: currentCompany?.followerCount ?? 0,
+    };
+  }
+
+  try {
+    const update = await Company.updateOne(
+      { _id: company._id, isSuspended: false },
+      { $inc: { followerCount: 1 } }
+    );
+    if (update.modifiedCount !== 1) {
+      await CompanyFollow.deleteOne({ company: company._id, user: user._id });
+      throw new ApiError(404, "Company not found.");
+    }
+  } catch (error) {
+    try {
+      await CompanyFollow.deleteOne({ company: company._id, user: user._id });
+    } catch (cleanupError) {
+      console.error("Failed to roll back company follow.", cleanupError);
+    }
+    throw error;
+  }
+
+  const updatedCompany = await Company.findById(company._id)
+    .select("followerCount")
+    .lean();
+  return { isFollowing: true, followerCount: updatedCompany?.followerCount ?? 0 };
+};
+
+export const unfollowCompany = async (user, companyId) => {
+  ensureActive(user);
+  const company = await getActiveCompany(companyId);
+  const deletion = await CompanyFollow.deleteOne({
+    company: company._id,
+    user: user._id,
+  });
+
+  if (deletion.deletedCount === 1) {
+    const counterUpdate = await Company.updateOne(
+      { _id: company._id, followerCount: { $gt: 0 } },
+      { $inc: { followerCount: -1 } }
+    );
+
+    if (counterUpdate.modifiedCount !== 1) {
+      const actualFollowerCount = await CompanyFollow.countDocuments({
+        company: company._id,
+      });
+      await Company.updateOne(
+        { _id: company._id },
+        { $set: { followerCount: actualFollowerCount } }
+      );
+    }
+  }
+
+  const updatedCompany = await Company.findById(company._id)
+    .select("followerCount")
+    .lean();
+  return {
+    isFollowing: false,
+    followerCount: updatedCompany?.followerCount ?? 0,
+  };
+};
+
+export const getCompanyJobs = async (user, companyId, query) => {
+  ensureActive(user);
+  const company = await getActiveCompany(companyId);
+  const { page, limit, skip } = getPagination(query);
+  const filter = {
+    postedByCompany: company._id,
+    status: "open",
+    moderationStatus: "approved",
+  };
+
+  const [jobs, total, savedJobs] = await Promise.all([
+    Job.find(filter)
+      .populate("postedByCompany", "name logo industry website isVerified")
+      .populate("postedByUser", "firstName lastName username avatar")
+      .sort({ createdAt: -1, _id: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    Job.countDocuments(filter),
+    SavedJob.find({ user: user._id }).select("job").lean(),
+  ]);
+  const savedIds = new Set(savedJobs.map(({ job }) => String(job)));
+
+  return {
+    company,
+    jobs: jobs.map((job) => ({
+      ...job,
+      postedBy: job.postedByUser ?? null,
+      company: job.postedByCompany ?? null,
+      isSaved: savedIds.has(String(job._id)),
+    })),
     pagination: {
       total,
       page,

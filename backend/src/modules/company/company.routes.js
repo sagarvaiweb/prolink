@@ -9,10 +9,13 @@ import {
   getCompaniesForVerification,
   getCompanyById,
   getCompanyMembers,
+  getCompanyJobs,
+  followCompany,
   removeCompanyMember,
   suspendCompany,
   searchCompanies,
   updateCompany,
+  unfollowCompany,
   verifyCompany,
 } from "./company.controller.js";
 import {
@@ -24,6 +27,7 @@ import {
   validateCompanyBody,
   validateCompanyQuery,
   validateCompanyMembersQuery,
+  validateCompanyJobsQuery,
 } from "./company.validation.js";
 
 const router = Router();
@@ -77,6 +81,22 @@ router.delete(
   validateParams(companyMemberParamsSchema),
   requireCompanyRole("owner", "admin"),
   removeCompanyMember
+);
+router.post(
+  "/:companyId/follow",
+  validateParams(companyIdParamsSchema),
+  followCompany
+);
+router.delete(
+  "/:companyId/follow",
+  validateParams(companyIdParamsSchema),
+  unfollowCompany
+);
+router.get(
+  "/:companyId/jobs",
+  validateParams(companyIdParamsSchema),
+  validateCompanyJobsQuery,
+  getCompanyJobs
 );
 router.patch(
   "/:companyId",

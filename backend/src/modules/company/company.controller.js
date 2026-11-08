@@ -97,3 +97,34 @@ export const suspendCompany = asyncHandler(async (req, res) => {
     .status(200)
     .json(new ApiResponse(200, result, "Company suspended successfully."));
 });
+
+export const followCompany = asyncHandler(async (req, res) => {
+  const result = await companyService.followCompany(
+    req.user,
+    req.params.companyId
+  );
+  res
+    .status(200)
+    .json(new ApiResponse(200, result, "Company followed successfully."));
+});
+
+export const unfollowCompany = asyncHandler(async (req, res) => {
+  const result = await companyService.unfollowCompany(
+    req.user,
+    req.params.companyId
+  );
+  res
+    .status(200)
+    .json(new ApiResponse(200, result, "Company unfollowed successfully."));
+});
+
+export const getCompanyJobs = asyncHandler(async (req, res) => {
+  const result = await companyService.getCompanyJobs(
+    req.user,
+    req.params.companyId,
+    req.validatedQuery
+  );
+  res
+    .status(200)
+    .json(new ApiResponse(200, result, "Company jobs fetched successfully."));
+});
