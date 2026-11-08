@@ -2,6 +2,7 @@ import asyncHandler from "../../utils/asyncHandler.js";
 import ApiResponse from "../../utils/ApiResponse.js";
 import * as analyticsService from "./analytics.service.js";
 import * as recruiterAnalyticsService from "./recruiterAnalytics.service.js";
+import * as adminAnalyticsService from "./adminAnalytics.service.js";
 
 const getRange = (req) => req.query.range || "30d";
 
@@ -40,4 +41,14 @@ export const getRecruiterJobsOverview = asyncHandler(async (req, res) => {
   res
     .status(200)
     .json(new ApiResponse(200, data, "Recruiter job analytics fetched successfully."));
+});
+
+export const getAdminPlatformStats = asyncHandler(async (req, res) => {
+  const data = await adminAnalyticsService.getPlatformStats(
+    req.user,
+    getRange(req)
+  );
+  res
+    .status(200)
+    .json(new ApiResponse(200, data, "Platform analytics fetched successfully."));
 });

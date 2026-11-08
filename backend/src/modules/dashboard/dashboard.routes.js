@@ -7,6 +7,7 @@ import { jobIdParamsSchema } from "../job/job.validation.js";
 import { dashboardRangeQuerySchema } from "./dashboard.validation.js";
 import {
   getApplicationsSummary,
+  getAdminPlatformStats,
   getNetworkGrowthStats,
   getPostEngagementStats,
   getProfileViewStats,
@@ -46,6 +47,12 @@ router.get(
   "/recruiter/jobs-overview",
   authorizeRole("recruiter"),
   getRecruiterJobsOverview
+);
+router.get(
+  "/admin/platform-stats",
+  authorizeRole("admin"),
+  validateQuery(dashboardRangeQuerySchema),
+  getAdminPlatformStats
 );
 
 export default router;
