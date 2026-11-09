@@ -9,6 +9,7 @@ import {
   BriefcaseBusiness,
   CheckCheck,
   ChevronDown,
+  Compass,
   Home,
   LoaderCircle,
   LogOut,
@@ -101,8 +102,10 @@ export default function NotificationCenter() {
   const shouldShowHeader = Boolean(accessToken && !isPublicPage);
   const [isOpen, setIsOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [isExploreOpen, setIsExploreOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const accountRef = useRef<HTMLDivElement>(null);
+  const exploreRef = useRef<HTMLDivElement>(null);
   const refreshInProgress = useRef(false);
   const [logout, { isLoading: isLoggingOut }] = useLogoutMutation();
   const { data: unreadData } = useGetUnreadNotificationCountQuery(undefined, {
@@ -167,16 +170,18 @@ export default function NotificationCenter() {
   }, [accessToken, dispatch, shouldShowHeader]);
 
   useEffect(() => {
-    if (!isOpen && !isAccountMenuOpen) return;
+    if (!isOpen && !isAccountMenuOpen && !isExploreOpen) return;
 
     const closeOnOutsideClick = (event: PointerEvent) => {
       if (!rootRef.current?.contains(event.target as Node)) setIsOpen(false);
       if (!accountRef.current?.contains(event.target as Node)) setIsAccountMenuOpen(false);
+      if (!exploreRef.current?.contains(event.target as Node)) setIsExploreOpen(false);
     };
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setIsOpen(false);
         setIsAccountMenuOpen(false);
+        setIsExploreOpen(false);
       }
     };
 
@@ -186,7 +191,7 @@ export default function NotificationCenter() {
       document.removeEventListener("pointerdown", closeOnOutsideClick);
       document.removeEventListener("keydown", closeOnEscape);
     };
-  }, [isAccountMenuOpen, isOpen]);
+  }, [isAccountMenuOpen, isExploreOpen, isOpen]);
 
   if (!shouldShowHeader) return null;
 
@@ -246,19 +251,59 @@ export default function NotificationCenter() {
   const roleLabel = user?.role
     ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
     : "Member";
+  const isFeedActive = pathname === "/feed";
+  const isNetworkActive = pathname.startsWith("/network");
+  const isJobsActive = pathname.startsWith("/jobs");
+  const isExploreActive = isNetworkActive || isJobsActive;
+
+  const navigationLinkClass = (isActive: boolean) =>
+    `flex h-9 w-9 items-center justify-center gap-2 rounded-xl px-0 text-xs font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 sm:w-auto sm:px-3 sm:text-sm ${
+      isActive
+        ? "bg-white text-primary-800 shadow-sm ring-1 ring-slate-200/70"
+        : "text-slate-600 hover:bg-white/70 hover:text-slate-950"
+    }`;
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 shadow-sm shadow-slate-900/[0.02] backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link href="/feed" className="flex items-center gap-2.5 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-700">
+        <Link href="/dashboard" className="flex items-center gap-2.5 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-700">
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary-800 text-sm font-black text-white shadow-sm">P</span>
           <span className="text-lg font-bold tracking-tight text-slate-900">ProLink</span>
         </Link>
 
-        <nav aria-label="Main navigation" className="flex items-center gap-0.5 sm:gap-1">
-          <Link href="/feed" aria-label="Feed" className="flex items-center gap-2 rounded-xl px-2 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-950 sm:px-3"><Home size={17} /><span className="hidden sm:inline">Feed</span></Link>
-          <Link href="/network" aria-label="Network" className="flex items-center gap-2 rounded-xl px-2 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-950 sm:px-3"><Network size={17} /><span className="hidden sm:inline">Network</span></Link>
-          <Link href="/jobs" aria-label="Jobs" className="flex items-center gap-2 rounded-xl px-2 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-950 sm:px-3"><BriefcaseBusiness size={17} /><span className="hidden sm:inline">Jobs</span></Link>
+        <nav aria-label="Main navigation" className="flex items-center gap-1 rounded-2xl border border-slate-200/70 bg-slate-100/80 p-1">
+          <Link href="/feed" aria-label="Feed" aria-current={isFeedActive ? "page" : undefined} onClick={() => setIsExploreOpen(false)} className={navigationLinkClass(isFeedActive)}>
+            <Home size={17} />
+            <span className="hidden sm:inline">Feed</span>
+          </Link>
+          <div className="relative" ref={exploreRef}>
+            <button
+              type="button"
+              aria-label="Explore network and jobs"
+              aria-expanded={isExploreOpen}
+              aria-haspopup="menu"
+              aria-controls="explore-menu"
+              onClick={() => setIsExploreOpen((open) => !open)}
+              className={navigationLinkClass(isExploreActive || isExploreOpen)}
+            >
+              <Compass size={17} />
+              <span className="hidden sm:inline">Explore</span>
+              <ChevronDown size={14} className={`hidden transition sm:block ${isExploreOpen ? "rotate-180" : ""}`} />
+            </button>
+            {isExploreOpen && (
+              <div id="explore-menu" role="menu" aria-label="Explore" className="absolute left-1/2 top-[calc(100%+0.75rem)] z-50 w-[min(15rem,calc(100vw-1.5rem))] -translate-x-1/2 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl shadow-slate-900/15 sm:left-0 sm:w-60 sm:translate-x-0">
+                <p className="px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Discover</p>
+                <Link href="/network" role="menuitem" aria-current={isNetworkActive ? "page" : undefined} onClick={() => setIsExploreOpen(false)} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 transition ${isNetworkActive ? "bg-primary-50 text-primary-900" : "text-slate-700 hover:bg-slate-50"}`}>
+                  <span className="grid h-9 w-9 place-items-center rounded-xl bg-indigo-50 text-indigo-700"><Network size={17} /></span>
+                  <span className="text-sm font-semibold">My network<span className="mt-0.5 block text-xs font-normal text-slate-500">Connect with professionals</span></span>
+                </Link>
+                <Link href="/jobs" role="menuitem" aria-current={isJobsActive ? "page" : undefined} onClick={() => setIsExploreOpen(false)} className={`mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 transition ${isJobsActive ? "bg-primary-50 text-primary-900" : "text-slate-700 hover:bg-slate-50"}`}>
+                  <span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-50 text-emerald-700"><BriefcaseBusiness size={17} /></span>
+                  <span className="text-sm font-semibold">Find jobs<span className="mt-0.5 block text-xs font-normal text-slate-500">Explore your next opportunity</span></span>
+                </Link>
+              </div>
+            )}
+          </div>
         </nav>
 
         <div className="relative" ref={rootRef}>
