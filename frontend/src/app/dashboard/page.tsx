@@ -84,7 +84,7 @@ function MetricCard({
   tone: string;
 }) {
   return (
-    <article className="group rounded-[24px] border border-slate-200/80 bg-white p-5 shadow-[0_14px_42px_-34px_rgba(15,23,42,0.34)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_48px_-32px_rgba(15,23,42,0.32)] sm:p-6">
+    <article className="group rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_14px_42px_-34px_rgba(15,23,42,0.34)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_22px_48px_-32px_rgba(15,23,42,0.32)] sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-slate-500">{label}</p>
@@ -106,7 +106,7 @@ function DashboardLoading() {
       <div className="h-44 animate-pulse rounded-[30px] bg-slate-200/70" />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[0, 1, 2, 3].map((item) => (
-          <div key={item} className="h-36 animate-pulse rounded-[24px] bg-white shadow-sm" />
+          <div key={item} className="h-36 animate-pulse rounded-3xl bg-white shadow-sm" />
         ))}
       </div>
       <div className="grid gap-5 lg:grid-cols-12">
@@ -150,6 +150,10 @@ export default function DashboardPage() {
   const totalEngagement = engagement
     ? engagement.totals.likes + engagement.totals.comments + engagement.totals.shares
     : 0;
+  const totalProfileViews = profileViews?.allTimeTotal ?? profileViews?.total ?? 0;
+  const selectedRangeProfileViews = range === "all"
+    ? totalProfileViews
+    : profileViews?.total ?? 0;
 
   const refetchAll = () => {
     profileViewsQuery.refetch();
@@ -167,7 +171,7 @@ export default function DashboardPage() {
   return (
     <ProtectedRoute>
       <main className="min-h-screen bg-[#f5f7fc] pb-14">
-        <div className="mx-auto w-full max-w-[1440px] px-4 pt-5 sm:px-7 sm:pt-8 lg:px-10">
+        <div className="mx-auto w-full max-w-360 px-4 pt-5 sm:px-7 sm:pt-8 lg:px-10">
           {isLoading ? (
             <DashboardLoading />
           ) : (
@@ -237,8 +241,10 @@ export default function DashboardPage() {
               <section aria-label="Key metrics" className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <MetricCard
                   label="Profile views"
-                  value={formatNumber(profileViews?.total ?? 0)}
-                  detail={`${formatNumber(profileViews?.allTimeTotal ?? profileViews?.total ?? 0)} all-time profile visits`}
+                  value={formatNumber(totalProfileViews)}
+                  detail={range === "all"
+                    ? "All-time profile views"
+                    : `${formatNumber(selectedRangeProfileViews)} tracked in ${periodLabel} · older views may be undated`}
                   icon={Eye}
                   tone="bg-indigo-50 text-indigo-600"
                 />

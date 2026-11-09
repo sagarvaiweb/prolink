@@ -70,7 +70,7 @@ function AccountAvatar({
 
   return (
     <span
-      className={`relative isolate grid shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-[#e9d9ad] via-[#fffaf0] to-[#b99a5a] p-[2px] shadow-[0_4px_12px_rgba(15,23,42,0.16)] ${isLarge ? "h-14 w-14" : "h-9 w-9"}`}
+      className={`relative isolate grid shrink-0 place-items-center overflow-hidden rounded-full bg-linear-to-br from-[#e9d9ad] via-[#fffaf0] to-[#b99a5a] p-0.5 shadow-[0_4px_12px_rgba(15,23,42,0.16)] ${isLarge ? "h-14 w-14" : "h-9 w-9"}`}
     >
       {src && !hasImageError ? (
         <img
@@ -83,7 +83,7 @@ function AccountAvatar({
         />
       ) : (
         <span
-          className={`grid h-full w-full place-items-center rounded-full border-2 border-white bg-gradient-to-br from-slate-900 to-slate-700 font-semibold tracking-wide text-[#f4e4bd] ${isLarge ? "text-base" : "text-[11px]"}`}
+          className={`grid h-full w-full place-items-center rounded-full border-2 border-white bg-linear-to-br from-slate-900 to-slate-700 font-semibold tracking-wide text-[#f4e4bd] ${isLarge ? "text-base" : "text-[11px]"}`}
         >
           {initials}
         </span>
@@ -264,7 +264,7 @@ export default function NotificationCenter() {
     }`;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 shadow-sm shadow-slate-900/[0.02] backdrop-blur-xl">
+    <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 shadow-sm shadow-slate-900/2 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link href="/dashboard" className="flex items-center gap-2.5 rounded-xl focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary-700">
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary-800 text-sm font-black text-white shadow-sm">P</span>
@@ -389,8 +389,8 @@ export default function NotificationCenter() {
           </button>
 
           {isAccountMenuOpen && (
-            <div id="account-menu" role="menu" aria-label="Account" className="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-[min(19rem,calc(100vw-1.5rem))] overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-2 shadow-2xl shadow-slate-900/15 ring-1 ring-black/[0.02]">
-              <div className="relative overflow-hidden rounded-[1.25rem] bg-gradient-to-br from-slate-50 via-white to-primary-50/80 p-4">
+            <div id="account-menu" role="menu" aria-label="Account" className="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-[min(19rem,calc(100vw-1.5rem))] overflow-hidden rounded-3xl border border-slate-200/80 bg-white p-2 shadow-2xl shadow-slate-900/15 ring-1 ring-black/2">
+              <div className="relative overflow-hidden rounded-[1.25rem] bg-linear-to-br from-slate-50 via-white to-primary-50/80 p-4">
                 <div aria-hidden="true" className="absolute -right-7 -top-10 h-28 w-28 rounded-full bg-primary-100/50 blur-2xl" />
                 <div className="relative flex items-center gap-3">
                   <AccountAvatar src={user?.avatar} initials={initials} size="large" />
