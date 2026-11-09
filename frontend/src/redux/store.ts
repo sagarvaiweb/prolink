@@ -7,8 +7,7 @@ import { postsApi } from "./features/posts/postsApi";
 import { jobsApi } from "./features/jobs/jobsApi";
 import { applicationsApi } from "./features/jobs/applicationsApi";
 import { notificationsApi } from "./features/notifications/notificationsApi";
-import companiesReducer from "./features/companies/companiesSlice";
-import { companiesApi } from "./features/companies/companiesApi";
+import { dashboardApi } from "./features/dashboard/dashboardApi";
 
 export const store = configureStore({
   reducer: {
@@ -21,7 +20,7 @@ export const store = configureStore({
     [jobsApi.reducerPath]: jobsApi.reducer,
     [applicationsApi.reducerPath]: applicationsApi.reducer,
     [notificationsApi.reducerPath]: notificationsApi.reducer,
-    [companiesApi.reducerPath]: companiesApi.reducer,
+    [dashboardApi.reducerPath]: dashboardApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
@@ -32,7 +31,7 @@ export const store = configureStore({
       jobsApi.middleware,
       applicationsApi.middleware,
       notificationsApi.middleware,
-      companiesApi.middleware
+      dashboardApi.middleware
     ),
 });
 

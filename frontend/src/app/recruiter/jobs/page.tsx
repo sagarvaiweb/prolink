@@ -91,10 +91,10 @@ export default function RecruiterJobsPage() {
                 Browse jobs
               </Link>
               <Link
-                href="/companies"
+                href="/recruiter/dashboard"
                 className="text-sm font-medium text-slate-500 transition hover:text-primary-800"
               >
-                Companies
+                Analytics dashboard
               </Link>
             </div>
 

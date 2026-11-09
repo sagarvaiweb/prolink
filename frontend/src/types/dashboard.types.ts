@@ -1,0 +1,97 @@
+import type { ApiResponse } from "./auth.types";
+
+export type DashboardRange = "7d" | "30d" | "90d" | "all";
+
+export interface ProfileViewsAnalytics {
+  total: number;
+  allTimeTotal?: number;
+  series: Array<{ date: string; count: number }>;
+}
+
+export interface PostEngagementAnalytics {
+  totals: {
+    posts: number;
+    likes: number;
+    comments: number;
+    shares: number;
+  };
+  series: Array<{
+    date: string;
+    posts: number;
+    likes: number;
+    comments: number;
+    shares: number;
+  }>;
+}
+
+export interface NetworkGrowthAnalytics {
+  totals: {
+    connections: number;
+    followers: number;
+  };
+  series: Array<{
+    date: string;
+    connections: number;
+    followers: number;
+  }>;
+}
+
+export type ApplicationStatus = "applied" | "shortlisted" | "rejected" | "hired";
+
+export interface ApplicationsSummary {
+  total: number;
+  byStatus: Record<ApplicationStatus, number>;
+}
+
+export interface RecruiterJobAnalytics {
+  _id: string;
+  title: string;
+  status: "open" | "closed";
+  moderationStatus: "pending" | "approved" | "rejected";
+  createdAt: string;
+  applicantCount: number;
+  views: number;
+  applicants: number;
+  byStatus: Record<ApplicationStatus, number>;
+}
+
+export interface RecruiterJobsOverview {
+  jobs: RecruiterJobAnalytics[];
+  totals: {
+    jobs: number;
+    views: number;
+    applicants: number;
+  };
+}
+
+export interface RecruiterJobFunnel {
+  jobId: string;
+  totalApplicants: number;
+  byStatus: Record<ApplicationStatus, number>;
+}
+
+export interface AdminPlatformStats {
+  totals: {
+    users: number;
+    posts: number;
+    jobs: number;
+    activeUsersToday: number;
+  };
+  range: DashboardRange;
+  series: Array<{
+    date: string;
+    totalUsers: number;
+    newUsers: number;
+    totalPosts: number;
+    totalJobs: number;
+    activeUsers: number;
+  }>;
+}
+
+export type ProfileViewsResponse = ApiResponse<ProfileViewsAnalytics>;
+export type PostEngagementResponse = ApiResponse<PostEngagementAnalytics>;
+export type NetworkGrowthResponse = ApiResponse<NetworkGrowthAnalytics>;
+export type ApplicationsSummaryResponse = ApiResponse<ApplicationsSummary>;
+export type RecruiterJobsOverviewResponse = ApiResponse<RecruiterJobsOverview>;
+export type RecruiterJobFunnelResponse = ApiResponse<RecruiterJobFunnel>;
+export type AdminPlatformStatsResponse = ApiResponse<AdminPlatformStats>;

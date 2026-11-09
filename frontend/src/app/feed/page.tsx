@@ -1,16 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft,
   BookmarkCheck,
   BriefcaseBusiness,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  Ellipsis,
   LoaderCircle,
   Network,
-  Bell,
   RefreshCw,
   ShieldCheck,
   UsersRound,
@@ -106,6 +106,8 @@ function FeedLoadingState() {
 export default function FeedPage() {
   const [page, setPage] = useState(1);
   const [composerVersion, setComposerVersion] = useState(0);
+  const [isFeedToolsOpen, setIsFeedToolsOpen] = useState(false);
+  const feedToolsRef = useRef<HTMLDivElement>(null);
   const user = useAppSelector((state) => state.auth.user);
   const { currentData, isLoading, isError, isFetching, refetch } =
     useGetFeedQuery({ page, limit: PAGE_SIZE });
@@ -117,6 +119,26 @@ export default function FeedPage() {
     isDeleting,
   } = usePostManagement();
   const feed = currentData?.data;
+
+  useEffect(() => {
+    if (!isFeedToolsOpen) return;
+
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (!feedToolsRef.current?.contains(event.target as Node)) {
+        setIsFeedToolsOpen(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsFeedToolsOpen(false);
+    };
+
+    document.addEventListener("pointerdown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isFeedToolsOpen]);
 
   const handleCreatePost = async (formData: FormData) => {
     try {
@@ -135,86 +157,75 @@ export default function FeedPage() {
     <ProtectedRoute>
       <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:py-12">
         <div className="mx-auto max-w-3xl">
-          <Link
-            href="/dashboard"
-            className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-primary-800"
-          >
-            <ArrowLeft size={16} />
-            Back to dashboard
-          </Link>
-          <Link
-            href="/saved-posts"
-            className="mb-6 ml-5 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-primary-800"
-          >
-            <BookmarkCheck size={16} />
-            Saved posts
-          </Link>
-          <Link
-            href="/jobs"
-            className="mb-6 ml-5 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-primary-800"
-          >
-            <BriefcaseBusiness size={16} />
-            Find jobs
-          </Link>
-          <Link
-            href="/notifications"
-            className="mb-6 ml-5 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-primary-800"
-          >
-            <Bell size={16} />
-            Notifications
-          </Link>
-          {(user?.role === "student" || user?.role === "professional") && (
-            <Link
-              href="/applications"
-              className="mb-6 ml-5 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-primary-800"
-            >
-              <BriefcaseBusiness size={16} />
-              My applications
-            </Link>
-          )}
-          {user?.role === "recruiter" && (
-            <Link
-              href="/recruiter/jobs"
-              className="mb-6 ml-5 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-primary-800"
-            >
-              <BriefcaseBusiness size={16} />
-              Manage jobs
-            </Link>
-          )}
-          {user?.role === "admin" && (
-            <Link
-              href="/admin/jobs"
-              className="mb-6 ml-5 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-primary-800"
-            >
-              <ShieldCheck size={16} />
-              Moderate jobs
-            </Link>
-          )}
-          {user?.role === "admin" && (
-            <Link
-              href="/admin/post-reports"
-              className="mb-6 ml-5 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-primary-800"
-            >
-              <ShieldCheck size={16} />
-              Moderate reports
-            </Link>
-          )}
-
-          <header className="mb-6 overflow-hidden rounded-3xl bg-linear-to-br from-primary-950 via-primary-800 to-primary-700 px-6 py-7 text-white sm:px-8">
-            <div className="flex items-center gap-4">
-              <div className="rounded-2xl bg-white/10 p-3">
-                <Network size={25} />
+          <header className="relative isolate mb-6 rounded-3xl bg-gradient-to-br from-slate-950 via-primary-950 to-slate-900 px-6 py-7 text-white shadow-[0_24px_60px_-36px_rgba(15,23,42,0.8)] sm:px-8 sm:py-8">
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden rounded-3xl">
+              <div className="absolute -right-16 -top-24 h-72 w-72 rounded-full bg-primary-500/20 blur-3xl" />
+              <div className="absolute -bottom-32 left-1/3 h-56 w-56 rounded-full bg-amber-300/10 blur-3xl" />
+              <div className="absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-amber-200/60 to-transparent" />
+            </div>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex min-w-0 items-center gap-4">
+                <div className="hidden rounded-2xl border border-white/10 bg-white/[0.07] p-3 text-amber-100 shadow-inner shadow-white/5 backdrop-blur sm:block">
+                  <Network size={25} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-amber-200/90 sm:text-xs">
+                    Your professional community
+                  </p>
+                  <h1 className="mt-1.5 text-2xl font-bold tracking-tight sm:text-3xl">
+                    Professional feed
+                  </h1>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium text-primary-100">
-                  Your professional community
-                </p>
-                <h1 className="mt-1 text-2xl font-bold sm:text-3xl">
-                  Professional feed
-                </h1>
+              <div className="relative shrink-0" ref={feedToolsRef}>
+                <button
+                  type="button"
+                  aria-expanded={isFeedToolsOpen}
+                  aria-haspopup="menu"
+                  aria-controls="feed-tools-menu"
+                  onClick={() => setIsFeedToolsOpen((open) => !open)}
+                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/15 bg-white/[0.08] px-3 text-sm font-semibold text-white shadow-sm backdrop-blur transition hover:border-white/25 hover:bg-white/[0.14] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-200 sm:px-3.5"
+                >
+                  <Ellipsis size={18} />
+                  <span className="hidden sm:inline">Feed tools</span>
+                  <ChevronDown size={14} className={`hidden transition sm:block ${isFeedToolsOpen ? "rotate-180" : ""}`} />
+                </button>
+                {isFeedToolsOpen && (
+                  <div id="feed-tools-menu" role="menu" aria-label="Feed tools" className="absolute right-0 top-[calc(100%+0.65rem)] z-30 w-[min(17rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 text-slate-800 shadow-2xl shadow-slate-950/25">
+                    <p className="px-3 pb-1 pt-2 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Your shortcuts</p>
+                    <Link href="/saved-posts" role="menuitem" onClick={() => setIsFeedToolsOpen(false)} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition hover:bg-primary-50 hover:text-primary-900">
+                      <span className="grid h-9 w-9 place-items-center rounded-xl bg-amber-50 text-amber-700"><BookmarkCheck size={17} /></span>
+                      Saved posts
+                    </Link>
+                    {(user?.role === "student" || user?.role === "professional") && (
+                      <Link href="/applications" role="menuitem" onClick={() => setIsFeedToolsOpen(false)} className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition hover:bg-primary-50 hover:text-primary-900">
+                        <span className="grid h-9 w-9 place-items-center rounded-xl bg-indigo-50 text-indigo-700"><BriefcaseBusiness size={17} /></span>
+                        My applications
+                      </Link>
+                    )}
+                    {user?.role === "recruiter" && (
+                      <Link href="/recruiter/jobs" role="menuitem" onClick={() => setIsFeedToolsOpen(false)} className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition hover:bg-primary-50 hover:text-primary-900">
+                        <span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-50 text-emerald-700"><BriefcaseBusiness size={17} /></span>
+                        Manage jobs
+                      </Link>
+                    )}
+                    {user?.role === "admin" && (
+                      <>
+                        <Link href="/admin/jobs" role="menuitem" onClick={() => setIsFeedToolsOpen(false)} className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition hover:bg-primary-50 hover:text-primary-900">
+                          <span className="grid h-9 w-9 place-items-center rounded-xl bg-violet-50 text-violet-700"><ShieldCheck size={17} /></span>
+                          Moderate jobs
+                        </Link>
+                        <Link href="/admin/post-reports" role="menuitem" onClick={() => setIsFeedToolsOpen(false)} className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition hover:bg-primary-50 hover:text-primary-900">
+                          <span className="grid h-9 w-9 place-items-center rounded-xl bg-rose-50 text-rose-700"><ShieldCheck size={17} /></span>
+                          Moderate reports
+                        </Link>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
-            <p className="mt-4 max-w-xl text-sm leading-6 text-primary-100">
+            <p className="mt-4 max-w-xl text-sm leading-6 text-slate-300">
               Updates from you, your connections, and the people you follow.
             </p>
           </header>
