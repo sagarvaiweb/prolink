@@ -2,11 +2,27 @@ import { Schema, model } from "mongoose";
 
 const jobSchema = new Schema(
   {
+    // postedBy is retained for records created before company posting existed.
     postedBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      required: true,
-      index: true,
+      required: function () {
+        return !this.postedByCompany;
+      },
+    },
+    postedByCompany: {
+      type: Schema.Types.ObjectId,
+      ref: "Company",
+      required: function () {
+        return !this.postedBy;
+      },
+    },
+    postedByUser: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: function () {
+        return Boolean(this.postedByCompany);
+      },
     },
     title: { type: String, required: true, trim: true, maxlength: 120 },
     description: { type: String, required: true, trim: true, maxlength: 20000 },
@@ -45,6 +61,8 @@ const jobSchema = new Schema(
 );
 
 jobSchema.index({ status: 1, createdAt: -1, _id: -1 });
+jobSchema.index({ postedByCompany: 1, status: 1, createdAt: -1 });
+jobSchema.index({ postedByUser: 1, createdAt: -1 });
 jobSchema.index({ requiredSkills: 1, status: 1 });
 jobSchema.index({ jobType: 1, experienceLevel: 1, status: 1 });
 

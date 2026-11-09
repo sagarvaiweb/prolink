@@ -10,6 +10,8 @@ import RoleNotice from "@/components/jobs/RoleNotice";
 import { getJobErrorMessage } from "@/components/jobs/jobErrors";
 import { useAppSelector } from "@/redux/hooks";
 import { useGetJobApplicantsQuery, useUpdateApplicationStatusMutation } from "@/redux/features/jobs/applicationsApi";
+import { useGetJobByIdQuery } from "@/redux/features/jobs/jobsApi";
+import JobCompanyAttribution from "@/components/jobs/JobCompanyAttribution";
 
 const PAGE_SIZE = 10;
 
@@ -18,6 +20,7 @@ export default function JobApplicantsPage() {
   const role = useAppSelector((state) => state.auth.user?.role);
   const [page, setPage] = useState(1);
   const { currentData, isLoading, isFetching, isError, refetch } = useGetJobApplicantsQuery({ jobId, page, limit: PAGE_SIZE }, { skip: role !== "recruiter" });
+  const jobQuery = useGetJobByIdQuery(jobId, { skip: role !== "recruiter" });
   const [updateStatus, { isLoading: isUpdating }] = useUpdateApplicationStatusMutation();
   const result = currentData?.data;
 
@@ -28,7 +31,7 @@ export default function JobApplicantsPage() {
 
   return <ProtectedRoute>{role !== "recruiter" ? <RoleNotice roleName="recruiter"/> : <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:py-10"><div className="mx-auto max-w-5xl">
     <Link href="/recruiter/jobs" className="text-sm font-medium text-slate-500 hover:text-primary-800">← Your job listings</Link>
-    <header className="my-6 rounded-3xl bg-linear-to-br from-primary-950 via-primary-800 to-primary-700 p-6 text-white sm:p-8"><p className="text-sm text-primary-100">Recruiter workspace</p><h1 className="mt-1 text-3xl font-bold">Applicants</h1><p className="mt-2 text-sm text-primary-100">Review candidates, compare resume matches, and update application statuses.</p></header>
+    <header className="my-6 rounded-3xl bg-linear-to-br from-primary-950 via-primary-800 to-primary-700 p-6 text-white sm:p-8"><p className="text-sm text-primary-100">Recruiter workspace</p><h1 className="mt-1 text-3xl font-bold">Applicants</h1><p className="mt-2 text-sm text-primary-100">Review candidates, compare resume matches, and update application statuses.</p>{jobQuery.currentData?.data && <div className="mt-5 flex flex-col gap-4 rounded-2xl bg-white/10 p-4 sm:flex-row sm:items-center sm:justify-between"><JobCompanyAttribution company={jobQuery.currentData.data.company} recruiter={jobQuery.currentData.data.postedBy} showRecruiter inverse/><div className="sm:text-right"><p className="text-xs text-primary-100">Applicants for</p><p className="mt-0.5 font-semibold">{jobQuery.currentData.data.title}</p></div></div>}</header>
     {isLoading && <div role="status" className="space-y-3">{[1,2,3].map((x)=><div key={x} className="h-40 animate-pulse rounded-2xl bg-white"/>)}</div>}
     {isError && <div role="alert" className="rounded-2xl border border-red-200 bg-white p-6 text-sm text-red-700">Could not load applicants. <button onClick={() => void refetch()} className="font-semibold underline">Try again</button></div>}
     {!isLoading && !isError && result?.applications.length === 0 && <section className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center"><UsersRound className="mx-auto text-primary-700"/><h2 className="mt-3 font-bold text-slate-900">No applicants yet</h2><p className="mt-1 text-sm text-slate-500">Applications for this listing will appear here.</p></section>}

@@ -13,9 +13,20 @@ export interface JobRecruiter {
   avatar?: string;
 }
 
+export interface JobCompany {
+  _id: string;
+  name: string;
+  logo?: string | null;
+  industry?: string;
+  website?: string | null;
+  isVerified?: boolean;
+  isSuspended?: boolean;
+}
+
 export interface Job {
   _id: string;
   postedBy: JobRecruiter | null;
+  company?: JobCompany | null;
   title: string;
   description: string;
   requiredSkills: string[];
@@ -66,6 +77,10 @@ export interface JobPayload {
   location: string;
   isRemote: boolean;
   salaryRange: string | null;
+}
+
+export interface CreateJobPayload extends JobPayload {
+  companyId: string;
 }
 
 export interface UpdateJobPayload {

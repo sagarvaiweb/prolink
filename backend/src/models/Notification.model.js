@@ -18,6 +18,9 @@ const notificationSchema = new Schema(
         "connection_request",
         "connection_accepted",
         "new_follower",
+        "company_recruiter_added",
+        "company_verified",
+        "company_suspended",
         "post_like",
         "post_comment",
         "job_application_received",
@@ -56,6 +59,11 @@ const notificationSchema = new Schema(
     },
     relatedCommentId: {
       type: Schema.Types.ObjectId,
+      default: null,
+    },
+    relatedCompanyId: {
+      type: Schema.Types.ObjectId,
+      ref: "Company",
       default: null,
     },
     jobTitle: {

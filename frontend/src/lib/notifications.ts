@@ -56,6 +56,13 @@ export function getNotificationDestination(
         : null;
     case "job_listing_removed":
       return "/jobs";
+    case "company_recruiter_added":
+    case "company_verified":
+      return notification.relatedCompanyId
+        ? "/companies/" + notification.relatedCompanyId
+        : "/companies";
+    case "company_suspended":
+      return "/companies";
     default:
       return notification.relatedJobId
         ? `/jobs/${notification.relatedJobId}`

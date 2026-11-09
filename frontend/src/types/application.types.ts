@@ -1,5 +1,5 @@
 import type { ApiResponse } from "./auth.types";
-import type { JobPagination } from "./job.types";
+import type { JobCompany, JobPagination, JobRecruiter } from "./job.types";
 
 export type ApplicationStatus = "applied" | "shortlisted" | "rejected" | "hired";
 
@@ -10,7 +10,8 @@ export interface ApplicationJob {
   jobType: string;
   experienceLevel: string;
   status: "open" | "closed";
-  postedBy?: { firstName: string; lastName: string; username: string };
+  postedBy?: JobRecruiter | null;
+  company?: JobCompany | null;
 }
 
 export interface ApplicantUser {

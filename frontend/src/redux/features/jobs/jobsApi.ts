@@ -2,6 +2,7 @@ import { createApi } from "@reduxjs/toolkit/query/react";
 import { baseQueryWithReauth } from "@/redux/baseQuery";
 import type {
   JobActionResponse,
+  CreateJobPayload,
   JobListParams,
   JobMutationResponse,
   JobPageResponse,
@@ -72,7 +73,7 @@ export const jobsApi = createApi({
         })) ?? []),
       ],
     }),
-    createJob: builder.mutation<JobMutationResponse, JobPayload>({
+    createJob: builder.mutation<JobMutationResponse, CreateJobPayload>({
       query: (body) => ({
         url: "/jobs",
         method: "POST",

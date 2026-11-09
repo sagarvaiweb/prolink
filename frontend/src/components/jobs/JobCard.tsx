@@ -10,6 +10,7 @@ import {
   Wifi,
 } from "lucide-react";
 import { toast } from "sonner";
+import JobCompanyAttribution from "@/components/jobs/JobCompanyAttribution";
 import {
   useSaveJobMutation,
   useUnsaveJobMutation,
@@ -48,10 +49,6 @@ export default function JobCard({
   const [saveJob, { isLoading: isSaving }] = useSaveJobMutation();
   const [unsaveJob, { isLoading: isUnsaving }] = useUnsaveJobMutation();
   const isUpdatingSavedState = isSaving || isUnsaving;
-  const companyName = job.postedBy
-    ? `${job.postedBy.firstName} ${job.postedBy.lastName}`.trim()
-    : "ProLink employer";
-
   const handleSave = async () => {
     try {
       if (job.isSaved) {
@@ -71,9 +68,7 @@ export default function JobCard({
     <article className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-md sm:p-6">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-slate-500">
-            {companyName}
-          </p>
+          <JobCompanyAttribution company={job.company} recruiter={job.postedBy} />
           <Link
             href={`/jobs/${job._id}`}
             className="mt-1 inline-block text-lg font-bold text-slate-900 transition group-hover:text-primary-800 focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 sm:text-xl"

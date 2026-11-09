@@ -109,6 +109,52 @@ export const notifyNewFollower = async ({ follower, recipientId }) => {
   ]);
 };
 
+export const notifyCompanyMemberAdded = async ({
+  addedBy,
+  memberId,
+  memberRole,
+  company,
+}) => {
+  const actorName = [addedBy.firstName, addedBy.lastName]
+    .filter(Boolean)
+    .join(" ");
+
+  await createNotifications([
+    {
+      recipient: memberId,
+      actor: addedBy._id,
+      type: "company_recruiter_added",
+      title: "Added to a company team",
+      message: `${actorName || "A company manager"} added you as ${memberRole === "admin" ? "a company admin" : "a recruiter"} to ${company.name}.`,
+      relatedCompanyId: company._id,
+    },
+  ]);
+};
+
+export const notifyCompanyStatusChanged = async ({
+  admin,
+  company,
+  memberIds,
+  isVerified,
+}) => {
+  const type = isVerified ? "company_verified" : "company_suspended";
+  const title = isVerified ? "Company verified" : "Company suspended";
+  const message = isVerified
+    ? `${company.name} has been verified and can post jobs.`
+    : `${company.name} has been suspended and can no longer post jobs.`;
+
+  await createNotifications(
+    [...new Set(memberIds.map(String))].map((memberId) => ({
+      recipient: memberId,
+      actor: admin._id,
+      type,
+      title,
+      message,
+      relatedCompanyId: company._id,
+    }))
+  );
+};
+
 export const notifyPostLike = async ({ actor, post }) => {
   const recipientId = post.author?._id ?? post.author;
   if (String(recipientId) === String(actor._id)) return;
@@ -165,7 +211,11 @@ export const notifyApplicationStatus = async ({
 };
 
 export const notifyJobRemoved = async ({ admin, job, applicantIds }) => {
-  const recipientIds = new Set([String(job.postedBy), ...applicantIds.map(String)]);
+  const jobPosterId = job.postedByUser ?? job.postedBy;
+  const recipientIds = new Set([
+    ...(jobPosterId ? [String(jobPosterId)] : []),
+    ...applicantIds.map(String),
+  ]);
   const message = `The job listing “${job.title}” was removed by an administrator.`;
 
   await createNotifications(

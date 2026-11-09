@@ -12,6 +12,7 @@ import { dashboardApi } from "./features/dashboard/dashboardApi";
 export const store = configureStore({
   reducer: {
     auth: authReducer,
+    companies: companiesReducer,
     [authApi.reducerPath]: authApi.reducer,
     [profileApi.reducerPath]: profileApi.reducer,
     [networkApi.reducerPath]: networkApi.reducer,
