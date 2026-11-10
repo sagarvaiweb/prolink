@@ -155,6 +155,25 @@ export const notifyCompanyStatusChanged = async ({
   );
 };
 
+export const notifyCompanyVerificationRejected = async ({
+  admin,
+  company,
+  memberIds,
+  note,
+}) => {
+  const reason = note ? ` Reason: ${note}` : "";
+  await createNotifications(
+    [...new Set(memberIds.map(String))].map((memberId) => ({
+      recipient: memberId,
+      actor: admin._id,
+      type: "company_verification_rejected",
+      title: "Company verification declined",
+      message: `${company.name} was not approved for verification.${reason}`.slice(0, 300),
+      relatedCompanyId: company._id,
+    }))
+  );
+};
+
 export const notifyPostLike = async ({ actor, post }) => {
   const recipientId = post.author?._id ?? post.author;
   if (String(recipientId) === String(actor._id)) return;

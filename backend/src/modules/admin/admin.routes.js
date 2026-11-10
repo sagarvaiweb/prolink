@@ -9,9 +9,29 @@ import {
   reviewPostReport,
 } from "../post/report.controller.js";
 import {
+  getCompaniesForVerification,
+  reviewCompanyVerification,
+  suspendCompany,
+} from "../company/company.controller.js";
+import {
+  companyIdParamsSchema,
+  validateCompanyQuery,
+} from "../company/company.validation.js";
+import {
+  getAdminUsers,
+  getUserById,
+  updateAccountStatus,
+  updateUser,
+} from "../user/user.controller.js";
+import {
+  adminCompanyReviewSchema,
   adminReportActionSchema,
   adminReportParamsSchema,
   adminReportsQuerySchema,
+  adminUserParamsSchema,
+  adminUserRoleSchema,
+  adminUsersQuerySchema,
+  adminUserStatusSchema,
 } from "./admin.validation.js";
 
 const router = Router();
@@ -26,4 +46,31 @@ router.patch(
   reviewPostReport
 );
 
+router.get("/companies/pending", validateCompanyQuery, getCompaniesForVerification);
+router.patch(
+  "/companies/:companyId/verification",
+  validateParams(companyIdParamsSchema),
+  validateRequest(adminCompanyReviewSchema),
+  reviewCompanyVerification
+);
+router.patch(
+  "/companies/:companyId/suspend",
+  validateParams(companyIdParamsSchema),
+  suspendCompany
+);
+
+router.get("/users", validateQuery(adminUsersQuerySchema), getAdminUsers);
+router.get("/users/:id", validateParams(adminUserParamsSchema), getUserById);
+router.patch(
+  "/users/:id/role",
+  validateParams(adminUserParamsSchema),
+  validateRequest(adminUserRoleSchema),
+  updateUser
+);
+router.patch(
+  "/users/:id/status",
+  validateParams(adminUserParamsSchema),
+  validateRequest(adminUserStatusSchema),
+  updateAccountStatus
+);
 export default router;

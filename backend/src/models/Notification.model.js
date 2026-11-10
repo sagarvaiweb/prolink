@@ -20,6 +20,7 @@ const notificationSchema = new Schema(
         "new_follower",
         "company_recruiter_added",
         "company_verified",
+        "company_verification_rejected",
         "company_suspended",
         "post_like",
         "post_comment",

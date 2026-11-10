@@ -8,8 +8,10 @@ import { Job } from "../../models/Job.model.js";
 import ApiError from "../../utils/ApiError.js";
 import {
   notifyCompanyMemberAdded,
+  notifyCompanyVerificationRejected,
   notifyCompanyStatusChanged,
 } from "../notification/notification.service.js";
+import { logAdminAction } from "../admin/actionLog.service.js";
 
 const COMPANY_CREATOR_FIELDS = "firstName lastName username avatar";
 const MEMBER_USER_FIELDS = "firstName lastName username avatar role";
@@ -524,7 +526,11 @@ export const getCompaniesForVerification = async (admin, query) => {
   if (admin.role !== "admin") throw new ApiError(403, "Admin access required.");
 
   const { page, limit, skip } = getPagination(query);
-  const filter = { isVerified: false, isSuspended: false };
+  const filter = {
+    isVerified: false,
+    isSuspended: false,
+    verificationStatus: { $ne: "rejected" },
+  };
   if (query.industry) {
     filter.industry = new RegExp(`^${escapeRegex(query.industry)}$`, "i");
   }
@@ -561,7 +567,7 @@ export const getCompaniesForVerification = async (admin, query) => {
 const getCompanyMemberIds = async (companyId) =>
   CompanyMember.distinct("user", { company: companyId });
 
-export const verifyCompany = async (admin, companyId) => {
+export const verifyCompany = async (admin, companyId, note = "") => {
   ensureActive(admin);
   if (admin.role !== "admin") throw new ApiError(403, "Admin access required.");
 
@@ -573,8 +579,15 @@ export const verifyCompany = async (admin, companyId) => {
   if (company.isVerified) {
     throw new ApiError(409, "Company has already been verified.");
   }
+  if (company.verificationStatus === "rejected") {
+    throw new ApiError(409, "A rejected company cannot be verified without reapplying.");
+  }
 
   company.isVerified = true;
+  company.verificationStatus = "approved";
+  company.verificationNote = note;
+  company.verificationReviewedBy = admin._id;
+  company.verificationReviewedAt = new Date();
   await company.save();
 
   const memberIds = await getCompanyMemberIds(company._id);
@@ -583,6 +596,48 @@ export const verifyCompany = async (admin, companyId) => {
     company,
     memberIds,
     isVerified: true,
+  });
+  await logAdminAction({
+    admin,
+    action: "company_verified",
+    targetType: "company",
+    targetId: company._id,
+    note: `Verification approved${note ? `; ${note}` : ""}`.slice(0, 500),
+  });
+
+  return company;
+};
+
+export const rejectCompanyVerification = async (admin, companyId, note) => {
+  ensureActive(admin);
+  if (admin.role !== "admin") throw new ApiError(403, "Admin access required.");
+
+  const company = await Company.findById(companyId);
+  if (!company) throw new ApiError(404, "Company not found.");
+  if (company.isSuspended) {
+    throw new ApiError(409, "A suspended company cannot be reviewed.");
+  }
+  if (company.isVerified || company.verificationStatus === "approved") {
+    throw new ApiError(409, "An approved company cannot be rejected.");
+  }
+  if (company.verificationStatus === "rejected") {
+    throw new ApiError(409, "Company verification has already been rejected.");
+  }
+
+  company.verificationStatus = "rejected";
+  company.verificationNote = note;
+  company.verificationReviewedBy = admin._id;
+  company.verificationReviewedAt = new Date();
+  await company.save();
+
+  const memberIds = await getCompanyMemberIds(company._id);
+  await notifyCompanyVerificationRejected({ admin, company, memberIds, note });
+  await logAdminAction({
+    admin,
+    action: "company_rejected",
+    targetType: "company",
+    targetId: company._id,
+    note: note.slice(0, 500),
   });
 
   return company;
@@ -615,6 +670,13 @@ export const suspendCompany = async (admin, companyId) => {
       company,
       memberIds,
       isVerified: false,
+    });
+    await logAdminAction({
+      admin,
+      action: "company_suspended",
+      targetType: "company",
+      targetId: company._id,
+      note: "Company suspended by administrator.",
     });
   }
 

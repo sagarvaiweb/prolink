@@ -20,3 +20,37 @@ export const adminReportActionSchema = Joi.object({
     .required(),
   note: Joi.string().trim().max(500).allow("").default(""),
 }).unknown(false);
+
+export const adminCompanyReviewSchema = Joi.object({
+  decision: Joi.string().valid("approve", "reject").required(),
+  note: Joi.string()
+    .trim()
+    .max(500)
+    .when("decision", {
+      is: "reject",
+      then: Joi.required(),
+      otherwise: Joi.optional().allow(""),
+    }),
+}).unknown(false);
+
+export const adminUsersQuerySchema = Joi.object({
+  search: Joi.string().trim().min(1).max(100),
+  role: Joi.string().valid("student", "professional", "recruiter", "admin"),
+  status: Joi.string().valid("active", "inactive", "suspended", "deleted"),
+  page: Joi.number().integer().min(1).max(100000).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(20),
+}).unknown(false);
+
+export const adminUserParamsSchema = Joi.object({ id: objectId }).unknown(false);
+
+export const adminUserRoleSchema = Joi.object({
+  role: Joi.string().valid("student", "professional", "recruiter", "admin").required(),
+  note: Joi.string().trim().max(500).allow(""),
+}).unknown(false);
+
+export const adminUserStatusSchema = Joi.object({
+  accountStatus: Joi.string()
+    .valid("active", "inactive", "suspended", "deleted")
+    .required(),
+  note: Joi.string().trim().max(500).allow(""),
+}).unknown(false);

@@ -115,6 +115,27 @@ export const verifyCompany = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, company, "Company verified successfully."));
 });
 
+export const reviewCompanyVerification = asyncHandler(async (req, res) => {
+  const { decision, note } = req.body;
+  const company = decision === "approve"
+    ? await companyService.verifyCompany(req.user, req.params.companyId, note)
+    : await companyService.rejectCompanyVerification(
+        req.user,
+        req.params.companyId,
+        note
+      );
+
+  res.status(200).json(
+    new ApiResponse(
+      200,
+      company,
+      decision === "approve"
+        ? "Company verification approved successfully."
+        : "Company verification rejected successfully."
+    )
+  );
+});
+
 export const suspendCompany = asyncHandler(async (req, res) => {
   const result = await companyService.suspendCompany(
     req.user,
