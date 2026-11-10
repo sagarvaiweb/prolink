@@ -10,7 +10,9 @@ import {
   ChartNoAxesCombined,
   Flag,
   Menu,
+  ScrollText,
   ShieldCheck,
+  UsersRound,
   X,
 } from "lucide-react";
 import { useAppSelector } from "@/redux/hooks";
@@ -40,6 +42,18 @@ const adminSections = [
     description: "Verify organizations",
     icon: Building2,
   },
+  {
+    href: "/admin/users",
+    label: "User accounts",
+    description: "Access and roles",
+    icon: UsersRound,
+  },
+  {
+    href: "/admin/activity",
+    label: "Activity log",
+    description: "Administrative actions",
+    icon: ScrollText,
+  },
 ];
 
 export default function AdminWorkspaceLayout({
@@ -50,10 +64,6 @@ export default function AdminWorkspaceLayout({
   const pathname = usePathname();
   const user = useAppSelector((state) => state.auth.user);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  useEffect(() => {
-    setIsMenuOpen(false);
-  }, [pathname]);
 
   useEffect(() => {
     if (!isMenuOpen) return;
@@ -199,7 +209,7 @@ export default function AdminWorkspaceLayout({
               <Menu size={19} />
             </button>
             <div className="min-w-0">
-              <p className="hidden text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400 sm:block">ProLink / Operations</p>
+              <p className="hidden text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400 sm:block">Admin workspace</p>
               <h2 className="truncate text-sm font-extrabold tracking-tight text-slate-900 sm:mt-0.5 sm:text-base">{activeSection}</h2>
             </div>
           </div>
