@@ -64,6 +64,10 @@ export const adminApi = createApi({
       query: ({ id, role }) => ({ url: `/admin/users/${id}/role`, method: "PATCH", body: { role } }),
       invalidatesTags: [{ type: "AdminUsers", id: "LIST" }, { type: "AdminLogs", id: "LIST" }],
     }),
+    updateAdminUserVerification: builder.mutation<ApiResponse<AdminUser>, { id: string; isVerified: boolean }>({
+      query: ({ id, isVerified }) => ({ url: `/users/${id}`, method: "PATCH", body: { isVerified } }),
+      invalidatesTags: [{ type: "AdminUsers", id: "LIST" }, { type: "AdminLogs", id: "LIST" }],
+    }),
     updateAdminUserStatus: builder.mutation<ApiResponse<AdminUser>, { id: string; accountStatus: AdminAccountStatus }>({
       query: ({ id, accountStatus }) => ({ url: `/admin/users/${id}/status`, method: "PATCH", body: { accountStatus } }),
       invalidatesTags: [{ type: "AdminUsers", id: "LIST" }, { type: "AdminLogs", id: "LIST" }],
@@ -83,6 +87,7 @@ export const {
   useSuspendAdminCompanyMutation,
   useGetAdminUsersQuery,
   useUpdateAdminUserRoleMutation,
+  useUpdateAdminUserVerificationMutation,
   useUpdateAdminUserStatusMutation,
   useGetAdminLogsQuery,
 } = adminApi;
