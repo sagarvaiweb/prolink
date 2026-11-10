@@ -1,4 +1,5 @@
 import Joi from "joi";
+import { ADMIN_ACTIONS, ADMIN_TARGET_TYPES } from "../../models/AdminActionLog.model.js";
 
 const objectId = Joi.string().hex().length(24).required().messages({
   "string.hex": "ID must be a valid ObjectId.",
@@ -52,5 +53,20 @@ export const adminUserStatusSchema = Joi.object({
   accountStatus: Joi.string()
     .valid("active", "inactive", "suspended", "deleted")
     .required(),
+  note: Joi.string().trim().max(500).allow(""),
+}).unknown(false);
+
+export const adminActionLogsQuerySchema = Joi.object({
+  page: Joi.number().integer().min(1).max(100000).default(1),
+  limit: Joi.number().integer().min(1).max(100).default(20),
+  action: Joi.string().valid(...ADMIN_ACTIONS),
+  targetType: Joi.string().valid(...ADMIN_TARGET_TYPES),
+  targetId: Joi.string().hex().length(24).messages({
+    "string.hex": "Target ID must be a valid ObjectId.",
+    "string.length": "Target ID must be a valid ObjectId.",
+  }),
+}).unknown(false);
+
+export const adminJobRemovalSchema = Joi.object({
   note: Joi.string().trim().max(500).allow(""),
 }).unknown(false);

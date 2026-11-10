@@ -7,6 +7,7 @@ import { User } from "../../models/User.model.js";
 import { JobView } from "../../models/JobView.model.js";
 import ApiError from "../../utils/ApiError.js";
 import { notifyJobRemoved } from "../notification/notification.service.js";
+import { logAdminAction } from "../admin/actionLog.service.js";
 
 const JOB_POPULATES = [
   {
@@ -284,8 +285,9 @@ export const deleteJob = async (user, jobId) => {
   ]);
 };
 
-export const removeJobByAdmin = async (admin, jobId) => {
+export const removeJobByAdmin = async (admin, jobId, note = "") => {
   ensureActive(admin);
+  if (admin.role !== "admin") throw new ApiError(403, "Admin access required.");
 
   const job = await Job.findById(jobId)
     .select("_id title postedBy postedByUser postedByCompany")
@@ -296,8 +298,20 @@ export const removeJobByAdmin = async (admin, jobId) => {
     .select("applicant")
     .lean();
 
+  const deletion = await Job.deleteOne({ _id: job._id });
+  if (deletion.deletedCount !== 1) {
+    throw new ApiError(409, "This job listing has already been removed.");
+  }
+
+  await logAdminAction({
+    admin,
+    action: "job_removed",
+    targetType: "job",
+    targetId: job._id,
+    note: `Job removed by administrator${note ? `; ${note}` : ""}`.slice(0, 500),
+  });
+
   await Promise.all([
-    Job.deleteOne({ _id: job._id }),
     SavedJob.deleteMany({ job: job._id }),
     Application.deleteMany({ job: job._id }),
     JobView.deleteMany({ job: job._id }),

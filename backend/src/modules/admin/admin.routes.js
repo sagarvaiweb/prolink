@@ -23,8 +23,15 @@ import {
   updateAccountStatus,
   updateUser,
 } from "../user/user.controller.js";
+import { removeJobByAdmin } from "../job/job.controller.js";
+import { jobIdParamsSchema } from "../job/job.validation.js";
+import { getAdminPlatformStats } from "../dashboard/dashboard.controller.js";
+import { dashboardRangeQuerySchema } from "../dashboard/dashboard.validation.js";
+import { getActionLogs } from "./admin.controller.js";
 import {
+  adminActionLogsQuerySchema,
   adminCompanyReviewSchema,
+  adminJobRemovalSchema,
   adminReportActionSchema,
   adminReportParamsSchema,
   adminReportsQuerySchema,
@@ -73,4 +80,15 @@ router.patch(
   validateRequest(adminUserStatusSchema),
   updateAccountStatus
 );
+
+router.delete(
+  "/jobs/:jobId",
+  validateParams(jobIdParamsSchema),
+  validateRequest(adminJobRemovalSchema),
+  removeJobByAdmin
+);
+
+router.get("/overview", validateQuery(dashboardRangeQuerySchema), getAdminPlatformStats);
+router.get("/logs", validateQuery(adminActionLogsQuerySchema), getActionLogs);
+
 export default router;
