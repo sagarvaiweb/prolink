@@ -70,6 +70,14 @@ export const companiesApi = createApi({
         { type: "Companies", id: "LIST" },
       ],
     }),
+    deleteCompany: builder.mutation<CompanyActionResponse, string>({
+      query: (companyId) => ({ url: `/companies/${companyId}`, method: "DELETE" }),
+      invalidatesTags: (_result, _error, companyId) => [
+        { type: "Company", id: companyId },
+        { type: "Companies", id: "LIST" },
+        { type: "CompanyVerification", id: "PENDING" },
+      ],
+    }),
     getCompanyMembers: builder.query<CompanyMembersResponse, { companyId: string; page: number; limit: number }>({
       query: ({ companyId, page, limit }) => ({ url: `/companies/${companyId}/members`, params: { page, limit } }),
       providesTags: (result, _error, { companyId }) => [
@@ -115,6 +123,7 @@ export const {
   useGetCompanyJobsQuery,
   useCreateCompanyMutation,
   useUpdateCompanyMutation,
+  useDeleteCompanyMutation,
   useGetCompanyMembersQuery,
   useSearchRecruiterCandidatesQuery,
   useAddCompanyMemberMutation,

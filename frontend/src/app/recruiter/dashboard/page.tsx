@@ -7,6 +7,7 @@ import {
   ArrowRight,
   ArrowUpRight,
   BriefcaseBusiness,
+  Building2,
   Eye,
   LoaderCircle,
   Plus,
@@ -144,9 +145,14 @@ function RecruiterDashboardContent() {
           <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-indigo-700">
             <ArrowLeft size={16} /> Personal dashboard
           </Link>
-          <Link href="/recruiter/jobs" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-indigo-700">
-            Manage job listings <ArrowUpRight size={15} />
-          </Link>
+          <div className="flex flex-wrap items-center gap-4">
+            <Link href="/companies" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-indigo-700">
+              <Building2 size={15} /> Companies
+            </Link>
+            <Link href="/recruiter/jobs" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-indigo-700">
+              Manage job listings <ArrowUpRight size={15} />
+            </Link>
+          </div>
         </div>
 
         {overviewQuery.isLoading ? (

@@ -12,11 +12,14 @@ const ensureActive = (user) => {
 };
 
 const getOwnedJob = async (recruiter, jobId) => {
-  const job = await Job.findById(jobId).select("_id postedBy").lean();
+  const job = await Job.findById(jobId)
+    .select("_id postedBy postedByUser")
+    .lean();
   if (!job) {
     throw new ApiError(404, "Job listing not found.");
   }
-  if (String(job.postedBy) !== String(recruiter._id)) {
+  const posterId = job.postedByUser ?? job.postedBy;
+  if (String(posterId) !== String(recruiter._id)) {
     throw new ApiError(403, "You don't have access to this job's analytics.");
   }
   return job;
@@ -56,7 +59,9 @@ export const getJobFunnel = async (recruiter, jobId) => {
 
 export const getJobsOverview = async (recruiter) => {
   ensureActive(recruiter);
-  const jobs = await Job.find({ postedBy: recruiter._id })
+  const jobs = await Job.find({
+    $or: [{ postedByUser: recruiter._id }, { postedBy: recruiter._id }],
+  })
     .select("_id title status moderationStatus createdAt applicantCount")
     .sort({ createdAt: -1, _id: -1 })
     .lean();
