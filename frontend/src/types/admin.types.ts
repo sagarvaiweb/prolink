@@ -1,4 +1,6 @@
 import type { ApiResponse } from "@/types/auth.types";
+import type { PostReportPage } from "@/types/post.types";
+import type { CompanyListResponse, CompanySize } from "@/types/company.types";
 
 export type AdminRole = "student" | "professional" | "recruiter" | "admin";
 export type AdminAccountStatus = "active" | "inactive" | "suspended" | "deleted";
@@ -32,6 +34,28 @@ export interface AdminUserQuery {
 }
 
 export type AdminUsersResponse = ApiResponse<AdminUserPage>;
+
+export type AdminReportAction = "dismiss" | "remove_content" | "warn_user" | "suspend_reporter";
+export interface AdminReportsQuery {
+  page: number;
+  limit: number;
+  status?: "pending" | "dismissed" | "actioned" | "post_removed";
+  type?: "post";
+}
+export type AdminReportsResponse = ApiResponse<PostReportPage>;
+export interface AdminCompanyReviewPayload {
+  companyId: string;
+  decision: "approve" | "reject";
+  note?: string;
+}
+export type AdminPendingCompaniesQuery = {
+  page: number;
+  limit: number;
+  search?: string;
+  industry?: string;
+  companySize?: CompanySize;
+};
+export type AdminPendingCompaniesResponse = CompanyListResponse;
 
 export type AdminAction =
   | "report_dismissed" | "post_removed" | "user_warned" | "user_suspended"

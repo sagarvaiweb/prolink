@@ -15,18 +15,14 @@ import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import RoleNotice from "@/components/jobs/RoleNotice";
 import ConfirmationDialog from "@/components/ui/ConfirmationDialog";
 import AdminCompanyCard from "@/components/companies/AdminCompanyCard";
-import {
-  useGetPendingCompaniesQuery,
-  useSearchCompaniesQuery,
-  useSuspendCompanyMutation,
-  useVerifyCompanyMutation,
-} from "@/redux/features/companies/companiesApi";
-import { useAppSelector } from "@/redux/hooks";
+import { companiesApi, useSearchCompaniesQuery } from "@/redux/features/companies/companiesApi";
+import { useGetAdminPendingCompaniesQuery, useReviewAdminCompanyMutation, useSuspendAdminCompanyMutation } from "@/redux/features/admin/adminApi";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
 import type { Company, CompanyListParams, CompanySize } from "@/types/company.types";
 
 const PAGE_SIZE = 10;
 type ReviewTab = "pending" | "verified";
-type ReviewAction = "verify" | "suspend";
+type ReviewAction = "verify" | "reject" | "suspend";
 
 const companySizes: CompanySize[] = ["1-10", "11-50", "51-200", "201-1000", "1000+"];
 
@@ -37,6 +33,7 @@ function getErrorMessage(error: unknown) {
 
 export default function AdminCompaniesPage() {
   const user = useAppSelector((state) => state.auth.user);
+  const dispatch = useAppDispatch();
   const [tab, setTab] = useState<ReviewTab>("pending");
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
@@ -45,7 +42,7 @@ export default function AdminCompaniesPage() {
   const [filters, setFilters] = useState<Omit<CompanyListParams, "page" | "limit" | "isVerified">>({});
   const [selectedAction, setSelectedAction] = useState<{ company: Company; action: ReviewAction } | null>(null);
 
-  const pendingQuery = useGetPendingCompaniesQuery(
+  const pendingQuery = useGetAdminPendingCompaniesQuery(
     { ...filters, page, limit: PAGE_SIZE },
     { skip: user?.role !== "admin" || tab !== "pending" }
   );
@@ -53,9 +50,10 @@ export default function AdminCompaniesPage() {
     { ...filters, isVerified: true, page, limit: PAGE_SIZE },
     { skip: user?.role !== "admin" || tab !== "verified" }
   );
-  const [verifyCompany, verifyState] = useVerifyCompanyMutation();
-  const [suspendCompany, suspendState] = useSuspendCompanyMutation();
-  const isPending = verifyState.isLoading || suspendState.isLoading;
+  const [reviewCompany, reviewState] = useReviewAdminCompanyMutation();
+  const [suspendCompany, suspendState] = useSuspendAdminCompanyMutation();
+  const [reviewNote, setReviewNote] = useState("");
+  const isPending = reviewState.isLoading || suspendState.isLoading;
   const activeQuery = tab === "pending" ? pendingQuery : verifiedQuery;
   const companyPage = activeQuery.currentData?.data;
 
@@ -86,9 +84,9 @@ export default function AdminCompaniesPage() {
     if (!selectedAction) return;
     const { company, action } = selectedAction;
     try {
-      if (action === "verify") {
-        await verifyCompany(company._id).unwrap();
-        toast.success(company.name + " is verified and can now post jobs.");
+      if (action === "verify" || action === "reject") {
+        await reviewCompany({ companyId: company._id, decision: action === "verify" ? "approve" : "reject", ...(reviewNote.trim() ? { note: reviewNote.trim() } : {}) }).unwrap();
+        toast.success(action === "verify" ? company.name + " is verified and can now post jobs." : company.name + " verification was rejected.");
       } else {
         const result = await suspendCompany(company._id).unwrap();
         const closedCount = result.data.closedJobCount ?? 0;
@@ -97,17 +95,19 @@ export default function AdminCompaniesPage() {
           (closedCount === 1 ? "job was" : "jobs were") + " closed."
         );
       }
+      dispatch(companiesApi.util.invalidateTags(["Companies", "CompanyVerification"]));
       if (companyPage?.companies.length === 1 && page > 1) {
         setPage((current) => current - 1);
       }
       setSelectedAction(null);
+      setReviewNote("");
     } catch (error) {
       toast.error(getErrorMessage(error));
     }
   };
 
   const closeDialog = () => {
-    if (!isPending) setSelectedAction(null);
+    if (!isPending) { setSelectedAction(null); setReviewNote(""); }
   };
 
   const filtersApplied = Object.keys(filters).length > 0;
@@ -192,6 +192,7 @@ export default function AdminCompaniesPage() {
                     view={tab}
                     isBusy={isPending}
                     onVerify={() => setSelectedAction({ company, action: "verify" })}
+                    onReject={() => setSelectedAction({ company, action: "reject" })}
                     onSuspend={() => setSelectedAction({ company, action: "suspend" })}
                   />
                 ))}
@@ -211,16 +212,21 @@ export default function AdminCompaniesPage() {
 
           <ConfirmationDialog
             isOpen={Boolean(selectedAction)}
-            title={selectedAction?.action === "verify" ? "Verify this company?" : "Suspend this company?"}
+            title={selectedAction?.action === "verify" ? "Verify this company?" : selectedAction?.action === "reject" ? "Reject this application?" : "Suspend this company?"}
             description={selectedAction?.action === "verify"
               ? selectedAction.company.name + " will receive verified status and its recruiters will be able to post jobs."
-              : selectedAction?.company.name + " will be hidden from users, blocked from posting, and all currently open jobs will be closed."}
-            confirmLabel={selectedAction?.action === "verify" ? "Verify company" : "Suspend company"}
-            isDestructive={selectedAction?.action === "suspend"}
+              : selectedAction?.action === "reject"
+                ? selectedAction.company.name + " will be notified that its verification was rejected. Add a clear reason to help the applicant understand the decision."
+                : selectedAction?.company.name + " will be hidden from users, blocked from posting, and all currently open jobs will be closed."}
+            confirmLabel={selectedAction?.action === "verify" ? "Verify company" : selectedAction?.action === "reject" ? "Reject application" : "Suspend company"}
+            isDestructive={selectedAction?.action !== "verify"}
             isPending={isPending}
+            canConfirm={selectedAction?.action !== "reject" || Boolean(reviewNote.trim())}
             onConfirm={runAction}
             onCancel={closeDialog}
-          />
+          >
+            {selectedAction?.action === "reject" && <label className="mt-4 block"><span className="mb-1.5 block text-xs font-semibold text-slate-700">Reason for rejection <span className="text-red-600">*</span></span><textarea value={reviewNote} onChange={(event) => setReviewNote(event.target.value.slice(0, 500))} rows={3} maxLength={500} required placeholder="Explain what needs to change before approval" className="w-full resize-y rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none placeholder:text-slate-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-50" /><span className="mt-1 block text-right text-[10px] text-slate-400">{reviewNote.length}/500</span></label>}
+          </ConfirmationDialog>
         </main>
       )}
     </ProtectedRoute>

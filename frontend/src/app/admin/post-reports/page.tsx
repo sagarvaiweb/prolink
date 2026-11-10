@@ -9,20 +9,20 @@ import {
   ChevronRight,
   ExternalLink,
   Flag,
-  LoaderCircle,
+  MessageSquareWarning,
   RefreshCw,
   ShieldCheck,
   Trash2,
+  UserRoundX,
 } from "lucide-react";
 import { toast } from "sonner";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import ConfirmationDialog from "@/components/ui/ConfirmationDialog";
 import { getPostErrorMessage } from "@/components/posts/postErrors";
-import {
-  useGetPostReportsQuery,
-  useReviewPostReportMutation,
-} from "@/redux/features/posts/postsApi";
-import { useAppSelector } from "@/redux/hooks";
+import { postsApi } from "@/redux/features/posts/postsApi";
+import { useGetAdminReportsQuery, useReviewAdminReportMutation } from "@/redux/features/admin/adminApi";
+import { useAppDispatch, useAppSelector } from "@/redux/hooks";
+import type { AdminReportAction } from "@/types/admin.types";
 import type { FeedPost, PostAuthor, PostReport } from "@/types/post.types";
 
 const PAGE_SIZE = 10;
@@ -89,25 +89,29 @@ function ReportedPostPreview({ post }: { post: FeedPost }) {
 function ReportCard({
   report,
   isReviewing,
-  onDismiss,
-  onRemovePost,
+  onReview,
 }: {
   report: PostReport;
   isReviewing: boolean;
-  onDismiss: () => void;
-  onRemovePost: () => Promise<boolean>;
+  onReview: (action: AdminReportAction, note: string) => Promise<boolean>;
 }) {
-  const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
+  const [reviewAction, setReviewAction] = useState<AdminReportAction | null>(null);
+  const [note, setNote] = useState("");
   const post = typeof report.post === "object" ? report.post : null;
   const reporter =
     typeof report.reporter === "object" ? report.reporter : null;
+  const reporterIsAdmin = reporter?.role === "admin";
   const reportedAt = new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(new Date(report.createdAt));
-  const handleRemovePost = async () => {
-    const removed = await onRemovePost();
-    if (removed) setIsRemoveDialogOpen(false);
+  const handleReview = async () => {
+    if (!reviewAction) return;
+    const reviewed = await onReview(reviewAction, note.trim());
+    if (reviewed) {
+      setReviewAction(null);
+      setNote("");
+    }
   };
 
   return (
@@ -157,66 +161,51 @@ function ReportCard({
       )}
 
       <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
-        <button
-          type="button"
-          onClick={onDismiss}
-          disabled={isReviewing}
-          className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {isReviewing ? (
-            <LoaderCircle size={16} className="animate-spin" />
-          ) : (
-            <Check size={16} />
-          )}
-          Dismiss report
-        </button>
-        <button
-          type="button"
-          onClick={() => setIsRemoveDialogOpen(true)}
-          disabled={isReviewing || !post}
-          className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-red-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <Trash2 size={16} />
-          Remove post
-        </button>
+        <button type="button" onClick={() => setReviewAction("dismiss")} disabled={isReviewing} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"><Check size={16} />Dismiss report</button>
+        <button type="button" onClick={() => setReviewAction("warn_user")} disabled={isReviewing || !post} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-amber-200 px-3 py-2 text-sm font-semibold text-amber-800 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"><MessageSquareWarning size={16} />Warn author</button>
+        <button type="button" onClick={() => setReviewAction("suspend_reporter")} disabled={isReviewing || !reporter || reporterIsAdmin} title={reporterIsAdmin ? "Administrator accounts cannot be suspended through reports" : undefined} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"><UserRoundX size={16} />Suspend reporter</button>
+        <button type="button" onClick={() => setReviewAction("remove_content")} disabled={isReviewing || !post} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-red-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"><Trash2 size={16} />Remove post</button>
       </div>
 
       <ConfirmationDialog
-        isOpen={isRemoveDialogOpen}
-        title="Remove this post?"
-        description="This permanently removes the post, its media, and related engagement. This action cannot be undone."
-        confirmLabel="Remove post"
-        isDestructive
+        isOpen={Boolean(reviewAction)}
+        title={reviewAction === "dismiss" ? "Dismiss this report?" : reviewAction === "warn_user" ? "Warn the post author?" : reviewAction === "suspend_reporter" ? "Suspend the reporter?" : "Remove this post?"}
+        description={reviewAction === "dismiss" ? "The report will be closed without taking action on the post." : reviewAction === "warn_user" ? "The post author will receive a moderation warning and the report will be closed." : reviewAction === "suspend_reporter" ? "The reporting account will be suspended and the report will be closed. This action affects their access to the platform." : "This permanently removes the post, its media, and related engagement. This action cannot be undone."}
+        confirmLabel={reviewAction === "dismiss" ? "Dismiss report" : reviewAction === "warn_user" ? "Send warning" : reviewAction === "suspend_reporter" ? "Suspend reporter" : "Remove post"}
+        isDestructive={reviewAction === "remove_content" || reviewAction === "suspend_reporter"}
         isPending={isReviewing}
-        onConfirm={handleRemovePost}
-        onCancel={() => setIsRemoveDialogOpen(false)}
-      />
+        onConfirm={handleReview}
+        onCancel={() => { if (!isReviewing) setReviewAction(null); }}
+      >
+        <label className="mt-4 block"><span className="mb-1.5 block text-xs font-semibold text-slate-700">Review note <span className="font-normal text-slate-400">(optional)</span></span><textarea value={note} onChange={(event) => setNote(event.target.value.slice(0, 500))} rows={3} maxLength={500} placeholder="Add context for the audit log" className="w-full resize-y rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none placeholder:text-slate-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-50" /><span className="mt-1 block text-right text-[10px] text-slate-400">{note.length}/500</span></label>
+      </ConfirmationDialog>
     </article>
   );
 }
 
 export default function AdminPostReportsPage() {
   const [page, setPage] = useState(1);
+  const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.auth.user);
   const isAdmin = user?.role === "admin";
   const { currentData, isLoading, isFetching, isError, refetch } =
-    useGetPostReportsQuery(
-      { page, limit: PAGE_SIZE },
+    useGetAdminReportsQuery(
+      { page, limit: PAGE_SIZE, status: "pending", type: "post" },
       { skip: !isAdmin }
     );
   const [reviewReport, { isLoading: isReviewing }] =
-    useReviewPostReportMutation();
+    useReviewAdminReportMutation();
   const reportPage = currentData?.data;
 
   const handleReview = async (
     report: PostReport,
-    status: "dismissed" | "post_removed"
+    action: AdminReportAction,
+    note: string
   ) => {
     try {
-      await reviewReport({ reportId: report._id, status }).unwrap();
-      toast.success(
-        status === "dismissed" ? "Report dismissed." : "Reported post removed."
-      );
+      await reviewReport({ reportId: report._id, action, note }).unwrap();
+      if (action === "remove_content") dispatch(postsApi.util.invalidateTags(["Feed", "Saved"]));
+      toast.success(({ dismiss: "Report dismissed.", remove_content: "Reported post removed.", warn_user: "Warning sent to the post author.", suspend_reporter: "Reporter account suspended." })[action]);
       if (reportPage?.reports.length === 1 && page > 1) {
         setPage((currentPage) => currentPage - 1);
       }
@@ -328,12 +317,7 @@ export default function AdminPostReportsPage() {
                       key={report._id}
                       report={report}
                       isReviewing={isReviewing}
-                      onDismiss={() =>
-                        void handleReview(report, "dismissed")
-                      }
-                      onRemovePost={() =>
-                        handleReview(report, "post_removed")
-                      }
+                      onReview={(action, note) => handleReview(report, action, note)}
                     />
                   ))}
                 </div>

@@ -10,14 +10,49 @@ import type {
   AdminUsersResponse,
   AdminAccountStatus,
   AdminUser,
+  AdminReportAction,
+  AdminReportsQuery,
+  AdminReportsResponse,
+  AdminCompanyReviewPayload,
+  AdminPendingCompaniesQuery,
+  AdminPendingCompaniesResponse,
 } from "@/types/admin.types";
 import type { ApiResponse } from "@/types/auth.types";
+import type { PostReport } from "@/types/post.types";
+import type { Company, CompanyStatusChangeResponse } from "@/types/company.types";
 
 export const adminApi = createApi({
   reducerPath: "adminApi",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["AdminUsers", "AdminLogs"],
+  tagTypes: ["AdminUsers", "AdminLogs", "AdminReports", "AdminCompanies"],
   endpoints: (builder) => ({
+    getAdminReports: builder.query<AdminReportsResponse, AdminReportsQuery>({
+      query: (params) => ({ url: "/admin/reports", params }),
+      providesTags: (result) => [
+        { type: "AdminReports", id: "LIST" },
+        ...(result?.data.reports.map(({ _id }) => ({ type: "AdminReports" as const, id: _id })) ?? []),
+      ],
+    }),
+    reviewAdminReport: builder.mutation<ApiResponse<PostReport>, { reportId: string; action: AdminReportAction; note?: string }>({
+      query: ({ reportId, ...body }) => ({ url: `/admin/reports/${reportId}/action`, method: "PATCH", body }),
+      invalidatesTags: [
+        { type: "AdminReports", id: "LIST" },
+        { type: "AdminLogs", id: "LIST" },
+        { type: "AdminUsers", id: "LIST" },
+      ],
+    }),
+    getAdminPendingCompanies: builder.query<AdminPendingCompaniesResponse, AdminPendingCompaniesQuery>({
+      query: (params) => ({ url: "/admin/companies/pending", params }),
+      providesTags: [{ type: "AdminCompanies", id: "PENDING" }],
+    }),
+    reviewAdminCompany: builder.mutation<ApiResponse<Company>, AdminCompanyReviewPayload>({
+      query: ({ companyId, ...body }) => ({ url: `/admin/companies/${companyId}/verification`, method: "PATCH", body }),
+      invalidatesTags: [{ type: "AdminCompanies", id: "PENDING" }, { type: "AdminLogs", id: "LIST" }],
+    }),
+    suspendAdminCompany: builder.mutation<CompanyStatusChangeResponse, string>({
+      query: (companyId) => ({ url: `/admin/companies/${companyId}/suspend`, method: "PATCH" }),
+      invalidatesTags: [{ type: "AdminCompanies", id: "PENDING" }, { type: "AdminLogs", id: "LIST" }],
+    }),
     getAdminUsers: builder.query<AdminUsersResponse, AdminUserQuery>({
       query: (params) => ({ url: "/admin/users", params }),
       providesTags: (result) => [
@@ -41,6 +76,11 @@ export const adminApi = createApi({
 });
 
 export const {
+  useGetAdminReportsQuery,
+  useReviewAdminReportMutation,
+  useGetAdminPendingCompaniesQuery,
+  useReviewAdminCompanyMutation,
+  useSuspendAdminCompanyMutation,
   useGetAdminUsersQuery,
   useUpdateAdminUserRoleMutation,
   useUpdateAdminUserStatusMutation,

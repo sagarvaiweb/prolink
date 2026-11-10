@@ -106,7 +106,7 @@ export type PostReportReason =
   | "inappropriate"
   | "other";
 
-export type PostReportStatus = "pending" | "dismissed" | "post_removed";
+export type PostReportStatus = "pending" | "dismissed" | "actioned" | "post_removed";
 
 export interface ReportPostPayload {
   postId: string;

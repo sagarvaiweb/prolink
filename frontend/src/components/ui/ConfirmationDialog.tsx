@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { LoaderCircle, X } from "lucide-react";
 
 interface ConfirmationDialogProps {
@@ -12,6 +12,8 @@ interface ConfirmationDialogProps {
   isPending?: boolean;
   onConfirm: () => void | Promise<void>;
   onCancel: () => void;
+  children?: ReactNode;
+  canConfirm?: boolean;
 }
 
 export default function ConfirmationDialog({
@@ -23,6 +25,8 @@ export default function ConfirmationDialog({
   isPending = false,
   onConfirm,
   onCancel,
+  children,
+  canConfirm = true,
 }: ConfirmationDialogProps) {
   const cancelButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -78,6 +82,7 @@ export default function ConfirmationDialog({
         >
           {description}
         </p>
+        {children}
         <div className="mt-6 flex justify-end gap-3">
           <button
             ref={cancelButtonRef}
@@ -91,7 +96,7 @@ export default function ConfirmationDialog({
           <button
             type="button"
             onClick={() => void onConfirm()}
-            disabled={isPending}
+            disabled={isPending || !canConfirm}
             className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50 ${
               isDestructive
                 ? "bg-red-700 hover:bg-red-800"

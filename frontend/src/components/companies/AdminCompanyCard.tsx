@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BadgeCheck, Ban, Building2, ExternalLink, MapPin, Users } from "lucide-react";
+import { BadgeCheck, Ban, Building2, CircleX, ExternalLink, MapPin, Users } from "lucide-react";
 import type { Company } from "@/types/company.types";
 
 interface Props {
@@ -7,6 +7,7 @@ interface Props {
   view: "pending" | "verified";
   isBusy?: boolean;
   onVerify?: () => void;
+  onReject?: () => void;
   onSuspend?: () => void;
 }
 
@@ -18,6 +19,7 @@ export default function AdminCompanyCard({
   view,
   isBusy = false,
   onVerify,
+  onReject,
   onSuspend,
 }: Props) {
   const creator =
@@ -121,14 +123,10 @@ export default function AdminCompanyCard({
 
         <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
           {view === "pending" && (
-            <button
-              type="button"
-              onClick={onVerify}
-              disabled={isBusy}
-              className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-wait disabled:opacity-50"
-            >
-              <BadgeCheck size={16} /> Verify company
-            </button>
+            <>
+              <button type="button" onClick={onReject} disabled={isBusy} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-wait disabled:opacity-50"><CircleX size={16} />Reject application</button>
+              <button type="button" onClick={onVerify} disabled={isBusy} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-emerald-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-wait disabled:opacity-50"><BadgeCheck size={16} /> Verify company</button>
+            </>
           )}
           <button
             type="button"
