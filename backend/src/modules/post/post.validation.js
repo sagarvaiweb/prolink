@@ -43,8 +43,10 @@ export const reportPostSchema = Joi.object({
 });
 
 export const reviewPostReportSchema = Joi.object({
-  status: Joi.string().valid("dismissed", "post_removed").required(),
-});
+  status: Joi.string().valid("dismissed", "post_removed"),
+  action: Joi.string().valid("dismiss", "remove_content", "warn_user", "suspend_reporter"),
+  note: Joi.string().trim().max(500).allow(""),
+}).xor("status", "action");
 
 export const createCommentSchema = Joi.object({
   content: Joi.string().trim().min(1).max(1000).required(),

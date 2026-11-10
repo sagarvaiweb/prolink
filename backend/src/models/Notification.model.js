@@ -23,6 +23,7 @@ const notificationSchema = new Schema(
         "company_suspended",
         "post_like",
         "post_comment",
+        "post_moderation_warning",
         "job_application_received",
         "application_status_updated",
         "job_listing_removed",

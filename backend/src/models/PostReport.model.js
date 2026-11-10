@@ -25,7 +25,7 @@ const postReportSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "dismissed", "post_removed"],
+      enum: ["pending", "dismissed", "actioned", "post_removed"],
       default: "pending",
       required: true,
     },
@@ -36,6 +36,11 @@ const postReportSchema = new Schema(
     },
     reviewedAt: {
       type: Date,
+      default: null,
+    },
+    action: {
+      type: String,
+      enum: ["dismiss", "remove_content", "warn_user", "suspend_reporter"],
       default: null,
     },
   },

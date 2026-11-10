@@ -24,7 +24,8 @@ export const reviewPostReport = asyncHandler(async (req, res) => {
   const report = await reportService.reviewPostReport(
     req.user,
     req.params.reportId,
-    req.body.status
+    req.body.action ?? req.body.status,
+    req.body.note
   );
   return res
     .status(200)

@@ -190,6 +190,19 @@ export const notifyPostComment = async ({ actor, post, comment }) => {
   ]);
 };
 
+export const notifyPostModerationWarning = async ({ admin, userId, postId }) => {
+  await createNotifications([
+    {
+      recipient: userId,
+      actor: admin._id,
+      type: "post_moderation_warning",
+      title: "Post moderation notice",
+      message: "An administrator reviewed one of your posts. Please review the community guidelines.",
+      relatedPostId: postId,
+    },
+  ]);
+};
+
 export const notifyApplicationStatus = async ({
   recruiter,
   applicantId,

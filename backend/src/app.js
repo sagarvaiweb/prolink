@@ -14,6 +14,7 @@ import applicationRoutes from "./modules/job/application.routes.js";
 import notificationRoutes from "./modules/notification/notification.routes.js";
 import dashboardRoutes from "./modules/dashboard/dashboard.routes.js";
 import companyRoutes from "./modules/company/company.routes.js";
+import adminRoutes from "./modules/admin/admin.routes.js";
 
 const app = express() ;
 
@@ -42,6 +43,7 @@ app.use("/api/applications", applicationRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/companies", companyRoutes);
+app.use("/api/admin", adminRoutes);
 
 // error handler middleware i.e always remain at the last of all middlewares
 app.use(errorHandler) ;
