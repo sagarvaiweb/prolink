@@ -43,6 +43,13 @@ export const updateCompany = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, result, "Company updated successfully."));
 });
 
+export const deleteCompany = asyncHandler(async (req, res) => {
+  await companyService.deleteCompany(req.user, req.params.companyId);
+  res
+    .status(200)
+    .json(new ApiResponse(200, null, "Company deleted successfully."));
+});
+
 export const addCompanyMember = asyncHandler(async (req, res) => {
   const member = await companyService.addCompanyMember(
     req.user,

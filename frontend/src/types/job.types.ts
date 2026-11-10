@@ -80,7 +80,7 @@ export interface JobPayload {
 }
 
 export interface CreateJobPayload extends JobPayload {
-  companyId: string;
+  companyId?: string;
 }
 
 export interface UpdateJobPayload {

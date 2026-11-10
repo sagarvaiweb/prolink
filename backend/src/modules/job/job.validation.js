@@ -34,7 +34,8 @@ export const moderationReviewSchema = Joi.object({
 
 export const createJobSchema = Joi.object({
   ...jobFields,
-  companyId: Joi.string().hex().length(24).required(),
+  // Company branding is optional; recruiter-only listings remain supported.
+  companyId: Joi.string().hex().length(24),
 }).fork(
   ["title", "description", "requiredSkills", "experienceLevel", "jobType", "location"],
   (schema) => schema.required()

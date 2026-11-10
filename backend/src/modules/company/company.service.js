@@ -184,6 +184,47 @@ export const updateCompany = async (user, companyId, updates) => {
   };
 };
 
+export const deleteCompany = async (user, companyId) => {
+  ensureActive(user);
+  const company = await Company.findById(companyId);
+  if (!company) throw new ApiError(404, "Company not found.");
+
+  const ownership = await CompanyMember.findOne({
+    company: company._id,
+    user: user._id,
+    role: "owner",
+  })
+    .select("_id")
+    .lean();
+  if (!ownership) {
+    throw new ApiError(403, "Only a company owner can delete this company.");
+  }
+  if (company.ownerCount > 1) {
+    throw new ApiError(
+      409,
+      "Remove the other owners before deleting this company."
+    );
+  }
+
+  const hasJobHistory = await Job.exists({ postedByCompany: company._id });
+  if (hasJobHistory) {
+    throw new ApiError(
+      409,
+      "This company has job history and cannot be deleted. Ask an admin to suspend it instead."
+    );
+  }
+
+  const deletion = await Company.deleteOne({ _id: company._id });
+  if (deletion.deletedCount !== 1) {
+    throw new ApiError(409, "The company changed while it was being deleted.");
+  }
+
+  await Promise.all([
+    CompanyMember.deleteMany({ company: company._id }),
+    CompanyFollow.deleteMany({ company: company._id }),
+  ]);
+};
+
 const getActiveCompany = async (companyId) => {
   const company = await Company.findOne({ _id: companyId, isSuspended: false });
   if (!company) throw new ApiError(404, "Company not found.");

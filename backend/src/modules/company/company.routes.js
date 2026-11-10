@@ -6,6 +6,7 @@ import requireCompanyRole from "../../middlewares/requireCompanyRole.middleware.
 import { uploadCompanyLogo } from "../../middlewares/upload.middleware.js";
 import {
   createCompany,
+  deleteCompany,
   addCompanyMember,
   getCompaniesForVerification,
   getCompanyById,
@@ -54,6 +55,12 @@ router.patch(
   authorizeRole("admin"),
   validateParams(companyIdParamsSchema),
   suspendCompany
+);
+router.delete(
+  "/:companyId",
+  validateParams(companyIdParamsSchema),
+  requireCompanyRole("owner"),
+  deleteCompany
 );
 router.post(
   "/",

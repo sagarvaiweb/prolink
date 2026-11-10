@@ -155,6 +155,12 @@ export const createJob = async (user, data) => {
   }
 
   const { companyId, ...jobData } = data;
+  if (!companyId) {
+    const job = await Job.create({ ...jobData, postedBy: user._id });
+    await job.populate(JOB_POPULATES);
+    return serializeJob(job);
+  }
+
   const company = await Company.findById(companyId).select(
     "_id isVerified isSuspended"
   );
@@ -227,7 +233,8 @@ export const getJobById = async (user, jobId) => {
   ) {
     throw new ApiError(404, "Job listing not found.");
   }
-  if (!job.postedBy._id.equals(user._id)) {
+  const posterId = getEntityId(job.postedByUser) ?? getEntityId(job.postedBy);
+  if (String(posterId) !== String(user._id)) {
     await JobView.create({ job: job._id, viewer: user._id });
   }
   const isSaved = Boolean(await SavedJob.exists({ user: user._id, job: job._id }));
