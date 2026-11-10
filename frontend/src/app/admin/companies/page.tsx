@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import Link from "next/link";
 import {
   Building2,
   ChevronLeft,
@@ -120,11 +119,6 @@ export default function AdminCompaniesPage() {
       ) : (
         <main className="min-h-screen bg-slate-50 px-4 py-7 sm:px-6 lg:py-10">
           <div className="mx-auto max-w-6xl">
-            <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-              <Link href="/feed" className="text-sm font-medium text-slate-500 transition hover:text-primary-800">← Back to feed</Link>
-              <Link href="/admin/jobs" className="text-sm font-medium text-slate-500 transition hover:text-primary-800">Job moderation</Link>
-            </div>
-
             <header className="relative mb-6 overflow-hidden rounded-3xl bg-linear-to-br from-primary-950 via-primary-800 to-primary-700 p-6 text-white shadow-lg shadow-primary-950/10 sm:p-8">
               <div aria-hidden="true" className="absolute -right-10 -top-16 h-60 w-60 rounded-full border border-white/10" />
               <div className="relative flex items-start gap-4">

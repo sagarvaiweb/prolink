@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import {
   BriefcaseBusiness,
   ChevronLeft,
@@ -105,18 +104,6 @@ export default function AdminJobsPage() {
       ) : (
         <main className="min-h-screen bg-slate-50 px-4 py-7 sm:px-6 lg:py-10">
           <div className="mx-auto max-w-5xl">
-            <div className="mb-6 flex items-center justify-between gap-4">
-              <Link href="/feed" className="text-sm font-medium text-slate-500 transition hover:text-primary-800">
-                ← Back to feed
-              </Link>
-              <Link href="/jobs" className="text-sm font-medium text-slate-500 transition hover:text-primary-800">
-                Browse public jobs
-              </Link>
-              <Link href="/admin/companies" className="text-sm font-medium text-slate-500 transition hover:text-primary-800">
-                Company review
-              </Link>
-            </div>
-
             <header className="mb-6 rounded-3xl bg-linear-to-br from-primary-950 via-primary-800 to-primary-700 p-6 text-white shadow-lg shadow-primary-950/10 sm:p-8">
               <div className="flex items-start gap-4">
                 <span className="rounded-2xl bg-white/10 p-3">

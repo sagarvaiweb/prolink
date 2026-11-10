@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
-  ArrowLeft,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -232,14 +231,6 @@ export default function AdminPostReportsPage() {
     <ProtectedRoute>
       <main className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:py-12">
         <div className="mx-auto max-w-4xl">
-          <Link
-            href="/feed"
-            className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-primary-800"
-          >
-            <ArrowLeft size={16} />
-            Back to feed
-          </Link>
-
           {!isAdmin ? (
             <section
               role="alert"

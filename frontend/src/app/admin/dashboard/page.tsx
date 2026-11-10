@@ -1,10 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import {
-  ArrowLeft,
-  ArrowUpRight,
   BriefcaseBusiness,
   FileText,
   LoaderCircle,
@@ -97,20 +94,6 @@ function AdminDashboardContent() {
   return (
     <main className="min-h-screen bg-[#f5f7fc] pb-14">
       <div className="mx-auto w-full max-w-[1440px] px-4 pt-5 sm:px-7 sm:pt-8 lg:px-10">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-indigo-700">
-            <ArrowLeft size={16} /> Personal dashboard
-          </Link>
-          <div className="flex flex-wrap gap-4">
-            <Link href="/admin/jobs" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-indigo-700">
-              Manage jobs <ArrowUpRight size={15} />
-            </Link>
-            <Link href="/admin/post-reports" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 transition hover:text-indigo-700">
-              Review reports <ArrowUpRight size={15} />
-            </Link>
-          </div>
-        </div>
-
         {statsQuery.isLoading ? (
           <AdminDashboardLoading />
         ) : statsQuery.isError && !stats ? (

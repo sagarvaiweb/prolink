@@ -44,7 +44,7 @@ export const dashboardApi = createApi({
     }),
     getAdminPlatformStats: builder.query<AdminPlatformStatsResponse, DashboardRange>({
       query: (range) => ({
-        url: "/dashboard/admin/platform-stats",
+        url: "/admin/overview",
         params: { range },
       }),
     }),
