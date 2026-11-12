@@ -126,6 +126,22 @@ export const reviewPostReport = async (admin, reportId, requestedAction, note = 
       });
       finalStatus = "actioned";
       logAction = "user_warned";
+    } else if (action === "suspend_author") {
+      const post = await Post.findById(report.post).select("_id author").lean();
+      if (!post) throw new ApiError(409, "This post has already been removed.");
+      const author = await User.findById(post.author).select("_id role accountStatus");
+      if (!author) throw new ApiError(404, "Post author account not found.");
+      if (author.role === "admin") {
+        throw new ApiError(403, "An administrator cannot be suspended through post moderation.");
+      }
+      if (author.accountStatus !== "suspended") {
+        author.accountStatus = "suspended";
+        await author.save();
+      }
+      finalStatus = "actioned";
+      logAction = "user_suspended";
+      logTargetType = "user";
+      logTargetId = author._id;
     } else if (action === "suspend_reporter") {
       const reporter = await User.findById(report.reporter).select("_id role accountStatus");
       if (!reporter) throw new ApiError(404, "Report author account not found.");

@@ -17,9 +17,16 @@ export const adminReportsQuerySchema = Joi.object({
 
 export const adminReportActionSchema = Joi.object({
   action: Joi.string()
-    .valid("dismiss", "remove_content", "warn_user", "suspend_reporter")
+    .valid("dismiss", "remove_content", "warn_user", "suspend_author", "suspend_reporter")
     .required(),
-  note: Joi.string().trim().max(500).allow("").default(""),
+  note: Joi.string()
+    .trim()
+    .max(500)
+    .when("action", {
+      is: Joi.valid("remove_content", "suspend_author", "suspend_reporter"),
+      then: Joi.string().min(3).required(),
+      otherwise: Joi.string().allow("").default(""),
+    }),
 }).unknown(false);
 
 export const adminCompanyReviewSchema = Joi.object({

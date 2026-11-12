@@ -35,7 +35,7 @@ export interface AdminUserQuery {
 
 export type AdminUsersResponse = ApiResponse<AdminUserPage>;
 
-export type AdminReportAction = "dismiss" | "remove_content" | "warn_user" | "suspend_reporter";
+export type AdminReportAction = "dismiss" | "remove_content" | "warn_user" | "suspend_author" | "suspend_reporter";
 export interface AdminReportsQuery {
   page: number;
   limit: number;

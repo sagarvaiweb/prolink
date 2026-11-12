@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Trash2,
   UserRoundX,
+  UserRoundCog,
 } from "lucide-react";
 import { toast } from "sonner";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
@@ -107,6 +108,10 @@ function ReportCard({
   }).format(new Date(report.createdAt));
   const handleReview = async () => {
     if (!reviewAction) return;
+    if (["remove_content", "suspend_author", "suspend_reporter"].includes(reviewAction) && note.trim().length < 3) {
+      toast.error("Add a short reason of at least 3 characters for this action.");
+      return;
+    }
     const reviewed = await onReview(reviewAction, note.trim());
     if (reviewed) {
       setReviewAction(null);
@@ -163,21 +168,22 @@ function ReportCard({
       <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
         <button type="button" onClick={() => setReviewAction("dismiss")} disabled={isReviewing} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"><Check size={16} />Dismiss report</button>
         <button type="button" onClick={() => setReviewAction("warn_user")} disabled={isReviewing || !post} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-amber-200 px-3 py-2 text-sm font-semibold text-amber-800 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50"><MessageSquareWarning size={16} />Warn author</button>
-        <button type="button" onClick={() => setReviewAction("suspend_reporter")} disabled={isReviewing || !reporter || reporterIsAdmin} title={reporterIsAdmin ? "Administrator accounts cannot be suspended through reports" : undefined} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"><UserRoundX size={16} />Suspend reporter</button>
+        <button type="button" onClick={() => setReviewAction("suspend_author")} disabled={isReviewing || !post || (typeof post.author === "object" && post.author.role === "admin")} title={typeof post?.author === "object" && post.author.role === "admin" ? "Administrator accounts cannot be suspended through post moderation" : undefined} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-red-200 px-3 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"><UserRoundCog size={16} />Suspend author</button>
+        <button type="button" onClick={() => setReviewAction("suspend_reporter")} disabled={isReviewing || !reporter || reporterIsAdmin} title={reporterIsAdmin ? "Administrator accounts cannot be suspended through reports" : undefined} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"><UserRoundX size={16} />Suspend reporter</button>
         <button type="button" onClick={() => setReviewAction("remove_content")} disabled={isReviewing || !post} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-red-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"><Trash2 size={16} />Remove post</button>
       </div>
 
       <ConfirmationDialog
         isOpen={Boolean(reviewAction)}
-        title={reviewAction === "dismiss" ? "Dismiss this report?" : reviewAction === "warn_user" ? "Warn the post author?" : reviewAction === "suspend_reporter" ? "Suspend the reporter?" : "Remove this post?"}
-        description={reviewAction === "dismiss" ? "The report will be closed without taking action on the post." : reviewAction === "warn_user" ? "The post author will receive a moderation warning and the report will be closed." : reviewAction === "suspend_reporter" ? "The reporting account will be suspended and the report will be closed. This action affects their access to the platform." : "This permanently removes the post, its media, and related engagement. This action cannot be undone."}
-        confirmLabel={reviewAction === "dismiss" ? "Dismiss report" : reviewAction === "warn_user" ? "Send warning" : reviewAction === "suspend_reporter" ? "Suspend reporter" : "Remove post"}
-        isDestructive={reviewAction === "remove_content" || reviewAction === "suspend_reporter"}
+        title={reviewAction === "dismiss" ? "Dismiss this report?" : reviewAction === "warn_user" ? "Warn the post author?" : reviewAction === "suspend_reporter" ? "Suspend the reporter?" : reviewAction === "suspend_author" ? "Suspend the post author?" : "Remove this post?"}
+        description={reviewAction === "dismiss" ? "The report will be closed without taking action on the post." : reviewAction === "warn_user" ? "The post author will receive a moderation warning and the report will be closed." : reviewAction === "suspend_reporter" ? "The reporting account will be suspended and the report will be closed. This action affects their access to the platform." : reviewAction === "suspend_author" ? "The post author’s account will be suspended and the report will be closed. This action affects their access to the platform." : "This permanently removes the post, its media, and related engagement. This action cannot be undone."}
+        confirmLabel={reviewAction === "dismiss" ? "Dismiss report" : reviewAction === "warn_user" ? "Send warning" : reviewAction === "suspend_reporter" ? "Suspend reporter" : reviewAction === "suspend_author" ? "Suspend author" : "Remove post"}
+        isDestructive={reviewAction === "remove_content" || reviewAction === "suspend_reporter" || reviewAction === "suspend_author"}
         isPending={isReviewing}
         onConfirm={handleReview}
         onCancel={() => { if (!isReviewing) setReviewAction(null); }}
       >
-        <label className="mt-4 block"><span className="mb-1.5 block text-xs font-semibold text-slate-700">Review note <span className="font-normal text-slate-400">(optional)</span></span><textarea value={note} onChange={(event) => setNote(event.target.value.slice(0, 500))} rows={3} maxLength={500} placeholder="Add context for the audit log" className="w-full resize-y rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none placeholder:text-slate-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-50" /><span className="mt-1 block text-right text-[10px] text-slate-400">{note.length}/500</span></label>
+        <label className="mt-4 block"><span className="mb-1.5 block text-xs font-semibold text-slate-700">Review note <span className="font-normal text-slate-400">{reviewAction && ["remove_content", "suspend_author", "suspend_reporter"].includes(reviewAction) ? "(required for this action)" : "(optional)"}</span></span><textarea value={note} onChange={(event) => setNote(event.target.value.slice(0, 500))} rows={3} maxLength={500} aria-required={Boolean(reviewAction && ["remove_content", "suspend_author", "suspend_reporter"].includes(reviewAction))} placeholder="Record the reason for the audit log" className="w-full resize-y rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none placeholder:text-slate-400 focus:border-primary-500 focus:ring-4 focus:ring-primary-50" /><span className="mt-1 block text-right text-[10px] text-slate-400">{note.length}/500</span></label>
       </ConfirmationDialog>
     </article>
   );
@@ -205,7 +211,7 @@ export default function AdminPostReportsPage() {
     try {
       await reviewReport({ reportId: report._id, action, note }).unwrap();
       if (action === "remove_content") dispatch(postsApi.util.invalidateTags(["Feed", "Saved"]));
-      toast.success(({ dismiss: "Report dismissed.", remove_content: "Reported post removed.", warn_user: "Warning sent to the post author.", suspend_reporter: "Reporter account suspended." })[action]);
+      toast.success(({ dismiss: "Report dismissed.", remove_content: "Reported post removed.", warn_user: "Warning sent to the post author.", suspend_author: "Post author account suspended.", suspend_reporter: "Reporter account suspended." })[action]);
       if (reportPage?.reports.length === 1 && page > 1) {
         setPage((currentPage) => currentPage - 1);
       }

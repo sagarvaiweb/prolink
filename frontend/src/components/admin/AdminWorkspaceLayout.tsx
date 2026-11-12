@@ -178,10 +178,20 @@ export default function AdminWorkspaceLayout({
           <Link
             href="/dashboard"
             onClick={() => setIsMenuOpen(false)}
-            className="flex items-center justify-between rounded-xl px-3 py-3 text-xs font-semibold text-slate-400 transition hover:bg-white/6 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-300"
+            aria-label="Return to the main ProLink dashboard"
+            className="group relative isolate flex items-center gap-3 overflow-hidden rounded-2xl border border-white/10 bg-linear-to-br from-white/9 via-white/5 to-teal-300/10 p-3.5 shadow-lg shadow-slate-950/10 transition duration-300 hover:-translate-y-0.5 hover:border-teal-200/30 hover:from-white/12 hover:to-teal-300/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-300"
           >
-            <span>Return to dashboard</span>
-            <ArrowUpRight size={15} />
+            <span className="pointer-events-none absolute -right-8 -top-10 -z-10 h-24 w-24 rounded-full bg-teal-300/10 blur-2xl transition group-hover:bg-teal-200/20" />
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-lime-100/20 bg-linear-to-br from-lime-200 to-teal-300 text-[#10213a] shadow-md shadow-teal-300/10 transition duration-300 group-hover:rotate-[-6deg] group-hover:scale-105">
+              <ChartNoAxesCombined size={19} strokeWidth={2.3} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-teal-100/70">Main workspace</span>
+              <span className="mt-1 block text-xs font-bold text-white">Return to dashboard</span>
+            </span>
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-400 transition group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:bg-white/10 group-hover:text-lime-200">
+              <ArrowUpRight size={16} />
+            </span>
           </Link>
           <div className="mt-3 flex items-center gap-3 border-t border-white/10 px-2 pt-4">
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-linear-to-br from-teal-200 to-lime-200 text-xs font-extrabold text-[#10213a]">
