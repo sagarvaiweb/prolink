@@ -8,6 +8,20 @@ import { JobView } from "../../models/JobView.model.js";
 import ApiError from "../../utils/ApiError.js";
 import { notifyJobRemoved } from "../notification/notification.service.js";
 import { logAdminAction } from "../admin/actionLog.service.js";
+import { deleteSearchDocument, setSearchable, upsertSearchDocument } from "../search/searchDocument.service.js";
+
+const indexJob = async (job, { isSearchable = job.status === "open" && job.moderationStatus === "approved" } = {}) => {
+  const company = job.postedByCompany && typeof job.postedByCompany === "object" ? job.postedByCompany : null;
+  return upsertSearchDocument({
+    entityType: "job",
+    entityId: job._id,
+    text: [job.title, job.description, ...(job.requiredSkills ?? []), job.location, job.experienceLevel, job.jobType, company?.name, company?.industry, job.isRemote ? "remote" : ""]
+      .filter(Boolean)
+      .join(" "),
+    metadata: { status: job.status, moderationStatus: job.moderationStatus },
+    isSearchable,
+  });
+};
 
 const JOB_POPULATES = [
   {
@@ -158,6 +172,7 @@ export const createJob = async (user, data) => {
   const { companyId, ...jobData } = data;
   if (!companyId) {
     const job = await Job.create({ ...jobData, postedBy: user._id });
+    await indexJob(job, { isSearchable: false });
     await job.populate(JOB_POPULATES);
     return serializeJob(job);
   }
@@ -186,6 +201,7 @@ export const createJob = async (user, data) => {
     postedByCompany: company._id,
     postedByUser: user._id,
   });
+  await indexJob(job, { isSearchable: false });
   await job.populate(JOB_POPULATES);
   return serializeJob(job);
 };
@@ -266,6 +282,7 @@ export const updateJob = async (user, jobId, updates) => {
     }
     throw error;
   }
+  await indexJob(job);
   await job.populate(JOB_POPULATES);
   return serializeJob(job);
 };
@@ -279,6 +296,7 @@ export const deleteJob = async (user, jobId) => {
   await ensureCanManageJob(job, user._id);
   await Promise.all([
     job.deleteOne(),
+    deleteSearchDocument("job", job._id),
     SavedJob.deleteMany({ job: job._id }),
     Application.deleteMany({ job: job._id }),
     JobView.deleteMany({ job: job._id }),
@@ -310,6 +328,8 @@ export const removeJobByAdmin = async (admin, jobId, note = "") => {
     targetId: job._id,
     note: `Job removed by administrator${note ? `; ${note}` : ""}`.slice(0, 500),
   });
+
+  await deleteSearchDocument("job", job._id);
 
   await Promise.all([
     SavedJob.deleteMany({ job: job._id }),
@@ -464,6 +484,11 @@ export const reviewJob = async (admin, jobId, { decision, note }) => {
   job.moderationStatus = decision === "approve" ? "approved" : "rejected";
   job.moderationNote = decision === "reject" ? note : null;
   await job.save();
+  if (job.moderationStatus === "approved" && job.status === "open") {
+    await indexJob(job, { isSearchable: true });
+  } else {
+    await setSearchable("job", job._id, false);
+  }
   await job.populate(JOB_POPULATES);
   return serializeJob(job);
 };
