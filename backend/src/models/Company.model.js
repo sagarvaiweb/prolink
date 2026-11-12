@@ -59,6 +59,32 @@ const companySchema = new Schema(
       default: false,
       required: true,
     },
+    verificationStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default() {
+        return this.isVerified ? "approved" : "pending";
+      },
+      required: true,
+    },
+    verificationNote: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+      default: "",
+      select: false,
+    },
+    verificationReviewedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+      select: false,
+    },
+    verificationReviewedAt: {
+      type: Date,
+      default: null,
+      select: false,
+    },
     isSuspended: {
       type: Boolean,
       default: false,
@@ -99,5 +125,6 @@ companySchema.pre("validate", function () {
 
 companySchema.index({ nameKey: 1 }, { unique: true });
 companySchema.index({ isSuspended: 1, nameKey: 1 });
+companySchema.index({ verificationStatus: 1, isSuspended: 1, createdAt: 1, _id: 1 });
 
 export const Company = model("Company", companySchema);

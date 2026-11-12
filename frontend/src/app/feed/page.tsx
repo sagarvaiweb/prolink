@@ -210,16 +210,10 @@ export default function FeedPage() {
                       </Link>
                     )}
                     {user?.role === "admin" && (
-                      <>
-                        <Link href="/admin/jobs" role="menuitem" onClick={() => setIsFeedToolsOpen(false)} className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition hover:bg-primary-50 hover:text-primary-900">
-                          <span className="grid h-9 w-9 place-items-center rounded-xl bg-violet-50 text-violet-700"><ShieldCheck size={17} /></span>
-                          Moderate jobs
-                        </Link>
-                        <Link href="/admin/post-reports" role="menuitem" onClick={() => setIsFeedToolsOpen(false)} className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition hover:bg-primary-50 hover:text-primary-900">
-                          <span className="grid h-9 w-9 place-items-center rounded-xl bg-rose-50 text-rose-700"><ShieldCheck size={17} /></span>
-                          Moderate reports
-                        </Link>
-                      </>
+                      <Link href="/admin/dashboard" role="menuitem" onClick={() => setIsFeedToolsOpen(false)} className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition hover:bg-primary-50 hover:text-primary-900">
+                        <span className="grid h-9 w-9 place-items-center rounded-xl bg-violet-50 text-violet-700"><ShieldCheck size={17} /></span>
+                        Admin workspace
+                      </Link>
                     )}
                   </div>
                 )}

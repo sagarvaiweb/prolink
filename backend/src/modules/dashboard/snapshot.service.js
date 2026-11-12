@@ -24,7 +24,7 @@ export const createDailySnapshot = async (date = new Date()) => {
   return DailyStatSnapshot.findOneAndUpdate(
     { date: dayStart },
     { $set: { totalUsers, newUsersToday, totalPosts, totalJobs, activeUsersToday } },
-    { upsert: true, new: true, setDefaultsOnInsert: true }
+    { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
   );
 };
 

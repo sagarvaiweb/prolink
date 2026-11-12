@@ -10,12 +10,14 @@ import { notificationsApi } from "./features/notifications/notificationsApi";
 import { dashboardApi } from "./features/dashboard/dashboardApi";
 import companiesReducer from "./features/companies/companiesSlice";
 import { companiesApi } from "./features/companies/companiesApi";
+import { adminApi } from "./features/admin/adminApi";
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     companies: companiesReducer,
     [companiesApi.reducerPath]: companiesApi.reducer,
+    [adminApi.reducerPath]: adminApi.reducer,
     [authApi.reducerPath]: authApi.reducer,
     [profileApi.reducerPath]: profileApi.reducer,
     [networkApi.reducerPath]: networkApi.reducer,
@@ -35,7 +37,8 @@ export const store = configureStore({
       applicationsApi.middleware,
       notificationsApi.middleware,
       dashboardApi.middleware,
-      companiesApi.middleware
+      companiesApi.middleware,
+      adminApi.middleware
     ),
 });
 
