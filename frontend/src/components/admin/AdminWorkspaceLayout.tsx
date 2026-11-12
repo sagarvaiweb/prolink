@@ -8,8 +8,8 @@ import {
   Building2,
   BriefcaseBusiness,
   ChartNoAxesCombined,
+  Ellipsis,
   Flag,
-  Menu,
   ScrollText,
   ShieldCheck,
   UsersRound,
@@ -55,6 +55,7 @@ const adminSections = [
     icon: ScrollText,
   },
 ];
+const primaryMobileSections = adminSections.slice(0, 3);
 
 export default function AdminWorkspaceLayout({
   children,
@@ -98,7 +99,7 @@ export default function AdminWorkspaceLayout({
 
       <aside
         id="admin-navigation-panel"
-        className={`fixed inset-y-0 left-0 z-50 flex w-[286px] flex-col overflow-y-auto border-r border-white/10 bg-[#0d172c] px-5 py-5 text-white shadow-2xl shadow-slate-950/20 transition-transform duration-300 lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-[min(88vw,320px)] flex-col overflow-y-auto border-r border-white/10 bg-[#0d172c] px-5 py-5 text-white shadow-2xl shadow-slate-950/20 transition-transform duration-300 lg:w-70 lg:translate-x-0 ${
           isMenuOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -129,7 +130,7 @@ export default function AdminWorkspaceLayout({
           </button>
         </div>
 
-        <div className="relative mt-8 flex items-center gap-2.5 rounded-2xl border border-white/[0.08] bg-white/[0.045] px-3.5 py-3">
+        <div className="relative mt-8 flex items-center gap-2.5 rounded-2xl border border-white/8 bg-white/4.5 px-3.5 py-3">
           <span className="relative grid h-8 w-8 place-items-center rounded-xl bg-teal-300/10 text-teal-200">
             <span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full border-2 border-[#15223a] bg-lime-300" />
             <ShieldCheck size={16} />
@@ -152,14 +153,14 @@ export default function AdminWorkspaceLayout({
                   href={href}
                   aria-current={isActive ? "page" : undefined}
                   onClick={() => setIsMenuOpen(false)}
-                  className={`group relative flex min-h-[58px] items-center gap-3 rounded-2xl px-3.5 py-2.5 transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-300 ${
+                  className={`group relative flex min-h-14.5 items-center gap-3 rounded-2xl px-3.5 py-2.5 transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-300 ${
                     isActive
-                      ? "bg-white/[0.11] text-white shadow-inner shadow-white/[0.03]"
-                      : "text-slate-400 hover:bg-white/[0.06] hover:text-slate-100"
+                      ? "bg-white/11 text-white shadow-inner shadow-white/11"
+                      : "text-slate-400 hover:bg-white/6 hover:text-slate-100"
                   }`}
                 >
-                  {isActive && <span className="absolute bottom-3 left-0 top-3 w-[3px] rounded-r-full bg-lime-300 shadow-[0_0_14px_rgba(190,242,100,0.8)]" />}
-                  <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl transition ${isActive ? "bg-lime-200 text-[#12213a]" : "bg-white/[0.06] text-slate-400 group-hover:bg-white/10 group-hover:text-teal-200"}`}>
+                  {isActive && <span className="absolute bottom-3 left-0 top-3 w-0.75 rounded-r-full bg-lime-300 shadow-[0_0_14px_rgba(190,242,100,0.8)]" />}
+                  <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl transition ${isActive ? "bg-lime-200 text-[#12213a]" : "bg-white/6 text-slate-400 group-hover:bg-white/10 group-hover:text-teal-200"}`}>
                     <Icon size={18} strokeWidth={2.1} />
                   </span>
                   <span className="min-w-0 flex-1">
@@ -175,11 +176,11 @@ export default function AdminWorkspaceLayout({
 
         <div className="relative mt-auto pt-8">
           <Link
-            href="/feed"
+            href="/dashboard"
             onClick={() => setIsMenuOpen(false)}
-            className="flex items-center justify-between rounded-xl px-3 py-3 text-xs font-semibold text-slate-400 transition hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-300"
+            className="flex items-center justify-between rounded-xl px-3 py-3 text-xs font-semibold text-slate-400 transition hover:bg-white/6 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-300"
           >
-            <span>Return to ProLink</span>
+            <span>Return to dashboard</span>
             <ArrowUpRight size={15} />
           </Link>
           <div className="mt-3 flex items-center gap-3 border-t border-white/10 px-2 pt-4">
@@ -195,31 +196,49 @@ export default function AdminWorkspaceLayout({
         </div>
       </aside>
 
-      <div className="min-h-screen lg:pl-[286px]">
-        <header className="fixed inset-x-0 top-0 z-30 flex h-[68px] items-center justify-between border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur-xl sm:px-6 lg:sticky lg:h-[76px] lg:px-9">
+      <div className="min-h-screen lg:pl-70">
+        <header className="hidden h-20 items-center justify-between border-b border-slate-200/80 bg-white/90 px-9 backdrop-blur-xl lg:sticky lg:flex">
           <div className="flex min-w-0 items-center gap-3">
-            <button
-              type="button"
-              aria-label="Open admin navigation"
-              aria-controls="admin-navigation-panel"
-              aria-expanded={isMenuOpen}
-              onClick={() => setIsMenuOpen(true)}
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 lg:hidden"
-            >
-              <Menu size={19} />
-            </button>
             <div className="min-w-0">
               <p className="hidden text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400 sm:block">Admin workspace</p>
               <h2 className="truncate text-sm font-extrabold tracking-tight text-slate-900 sm:mt-0.5 sm:text-base">{activeSection}</h2>
             </div>
           </div>
-          <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 shadow-sm sm:gap-2.5 sm:px-3.5">
+          <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white px-2.5 py-2 shadow-sm sm:flex sm:gap-2.5 sm:px-3.5">
             <span className="h-2 w-2 rounded-full bg-emerald-500 ring-4 ring-emerald-50" />
             <span className="text-[10px] font-bold text-slate-600 sm:text-xs">Secure session</span>
           </div>
         </header>
-        <div className="pt-[68px] lg:pt-0">{children}</div>
+        <div className="pb-32 lg:pb-0">{children}</div>
       </div>
+
+      <nav aria-label="Quick admin navigation" className="fixed inset-x-3 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-30 grid grid-cols-4 gap-1 rounded-2xl border border-white/70 bg-white/90 p-1.5 shadow-[0_16px_45px_-22px_rgba(15,23,42,0.45)] backdrop-blur-xl lg:hidden">
+        {primaryMobileSections.map(({ href, label, icon: Icon }) => {
+          const isActive = pathname === href || pathname.startsWith(`${href}/`);
+          return (
+            <Link
+              key={href}
+              href={href}
+              aria-current={isActive ? "page" : undefined}
+              className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-center transition ${isActive ? "bg-[#f2f0e8] text-slate-900" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}`}
+            >
+              <Icon size={18} strokeWidth={isActive ? 2.4 : 2} />
+              <span className="text-[9px] font-bold leading-3">{label === "Post reports" ? "Reports" : label === "Job moderation" ? "Jobs" : label}</span>
+            </Link>
+          );
+        })}
+        <button
+          type="button"
+          aria-label="More admin sections"
+          aria-controls="admin-navigation-panel"
+          aria-expanded={isMenuOpen}
+          onClick={() => setIsMenuOpen(true)}
+          className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl px-1 text-center transition ${isMenuOpen || !primaryMobileSections.some(({ href }) => pathname === href || pathname.startsWith(`${href}/`)) ? "bg-[#f2f0e8] text-slate-900" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}`}
+        >
+          <Ellipsis size={19} />
+          <span className="text-[9px] font-bold leading-3">More</span>
+        </button>
+      </nav>
     </div>
   );
 }

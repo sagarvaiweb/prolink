@@ -44,7 +44,7 @@ function SummaryCard({
   tone: string;
 }) {
   return (
-    <article className="rounded-[24px] border border-slate-200/80 bg-white p-5 shadow-[0_14px_42px_-34px_rgba(15,23,42,0.34)] sm:p-6">
+    <article className="rounded-3xl border border-slate-200/80 bg-white p-5 shadow-[0_14px_42px_-34px_rgba(15,23,42,0.34)] sm:p-6">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-slate-500">{label}</p>
@@ -66,10 +66,10 @@ function AdminDashboardLoading() {
       <div className="h-48 animate-pulse rounded-[30px] bg-slate-200/70" />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {[0, 1, 2, 3].map((item) => (
-          <div key={item} className="h-36 animate-pulse rounded-[24px] bg-white shadow-sm" />
+          <div key={item} className="h-36 animate-pulse rounded-3xl bg-white shadow-sm" />
         ))}
       </div>
-      <div className="h-[430px] animate-pulse rounded-[28px] bg-white shadow-sm" />
+      <div className="h-107.5 animate-pulse rounded-3xl bg-white shadow-sm" />
     </div>
   );
 }
@@ -92,8 +92,8 @@ function AdminDashboardContent() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f5f7fc] pb-14">
-      <div className="mx-auto w-full max-w-[1440px] px-4 pt-5 sm:px-7 sm:pt-8 lg:px-10">
+    <main className="min-h-screen bg-[#f5f7fc] pb-10 sm:pb-14">
+      <div className="mx-auto w-full max-w-360 px-3 pt-4 sm:px-6 sm:pt-7 lg:px-9 lg:pt-8 2xl:px-12">
         {statsQuery.isLoading ? (
           <AdminDashboardLoading />
         ) : statsQuery.isError && !stats ? (
@@ -107,10 +107,10 @@ function AdminDashboardContent() {
           </section>
         ) : stats ? (
           <>
-            <section className="relative isolate overflow-hidden rounded-[30px] bg-[#111b3d] px-6 py-7 text-white shadow-[0_30px_75px_-44px_rgba(33,53,120,0.9)] sm:px-9 sm:py-9 lg:px-11">
+            <section className="relative isolate overflow-hidden rounded-3xl bg-[#111b3d] px-5 py-6 text-white shadow-[0_30px_75px_-44px_rgba(33,53,120,0.9)] sm:rounded-[30px] sm:px-8 sm:py-8 lg:px-10 xl:px-11 xl:py-9">
               <div className="absolute -right-20 -top-32 -z-10 h-80 w-80 rounded-full bg-indigo-500/30 blur-3xl" />
               <div className="absolute -bottom-32 right-1/3 -z-10 h-64 w-64 rounded-full bg-teal-400/20 blur-3xl" />
-              <div className="flex flex-col justify-between gap-8 xl:flex-row xl:items-end">
+              <div className="flex flex-col justify-between gap-6 xl:flex-row xl:items-end xl:gap-10">
                 <div className="max-w-2xl">
                   <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.16em] text-indigo-100">
                     <ShieldCheck size={14} className="text-teal-300" /> Admin overview
@@ -126,7 +126,7 @@ function AdminDashboardContent() {
                       <span className="inline-flex items-center gap-2"><LoaderCircle size={14} className="animate-spin" /> Updating snapshot</span>
                     ) : "Latest platform snapshot"}
                   </p>
-                  <div className="flex flex-wrap gap-1.5 rounded-2xl border border-white/10 bg-black/10 p-1.5" role="group" aria-label="Choose platform analytics date range">
+                  <div className="grid w-full grid-cols-2 gap-1.5 rounded-2xl border border-white/10 bg-black/10 p-1.5 sm:flex sm:w-auto sm:flex-wrap" role="group" aria-label="Choose platform analytics date range">
                     {ranges.map((item) => (
                       <button
                         key={item.value}
@@ -149,14 +149,14 @@ function AdminDashboardContent() {
               </div>
             )}
 
-            <section aria-label="Current platform totals" className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <section aria-label="Current platform totals" className="mt-4 grid gap-3 sm:mt-6 sm:grid-cols-2 sm:gap-4 xl:grid-cols-4">
               <SummaryCard label="Total users" value={stats.totals.users} note={`+${formatNumber(newUsersInRange)} new in this period`} icon={UsersRound} tone="bg-indigo-50 text-indigo-600" />
               <SummaryCard label="Active today" value={stats.totals.activeUsersToday} note="Accounts with a login today" icon={ShieldCheck} tone="bg-teal-50 text-teal-600" />
               <SummaryCard label="Published posts" value={stats.totals.posts} note="Posts currently on the platform" icon={FileText} tone="bg-amber-50 text-amber-600" />
               <SummaryCard label="Job listings" value={stats.totals.jobs} note="Listings currently on the platform" icon={BriefcaseBusiness} tone="bg-rose-50 text-rose-500" />
             </section>
 
-            <section className="mt-5">
+            <section className="mt-4 sm:mt-5">
               <PlatformTrendChart stats={stats} />
             </section>
 
