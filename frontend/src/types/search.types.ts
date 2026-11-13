@@ -3,6 +3,7 @@ import type { Job, JobPagination } from "./job.types";
 
 export type SearchType = "all" | "people" | "jobs" | "posts" | "companies";
 export type SearchMode = "keyword" | "smart";
+export type SearchFilters = Pick<SearchParams, "role" | "location" | "jobType" | "experienceLevel" | "industry">;
 
 export interface SearchParams {
   q: string;

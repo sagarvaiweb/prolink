@@ -1,14 +1,16 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import type { SearchMode, SearchType } from "@/types/search.types";
+import type { SearchFilters, SearchMode, SearchType } from "@/types/search.types";
 
 interface SearchState {
   query: string;
   activeType: SearchType;
   searchMode: SearchMode;
   page: number;
+  filters: SearchFilters;
 }
 
-const initialState: SearchState = { query: "", activeType: "all", searchMode: "keyword", page: 1 };
+export const emptySearchFilters: SearchFilters = {};
+const initialState: SearchState = { query: "", activeType: "all", searchMode: "keyword", page: 1, filters: emptySearchFilters };
 
 const searchSlice = createSlice({
   name: "search",

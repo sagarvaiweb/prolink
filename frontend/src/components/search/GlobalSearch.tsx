@@ -14,7 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import { setSearchRequest } from "@/redux/features/search/searchSlice";
+import { emptySearchFilters, setSearchRequest } from "@/redux/features/search/searchSlice";
 import {
   useAutocompleteQuery,
   useClearRecentSearchesMutation,
@@ -300,7 +300,7 @@ export default function GlobalSearch() {
   const goToSearch = (query: string, type: SearchType = "all") => {
     const normalized = query.trim();
     if (!normalized) return;
-    dispatch(setSearchRequest({ query: normalized, activeType: type, searchMode: "keyword", page: 1 }));
+    dispatch(setSearchRequest({ query: normalized, activeType: type, searchMode: "keyword", page: 1, filters: emptySearchFilters }));
     setValue(normalized);
     setIsOpen(false);
     setIsMobileOpen(false);

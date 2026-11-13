@@ -21,7 +21,8 @@ import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import { clearSearch, setSearchRequest } from "@/redux/features/search/searchSlice";
 import { useSearchQuery } from "@/redux/features/search/searchApi";
 import { useAppDispatch, useAppSelector } from "@/redux/hooks";
-import type { SearchCompany, SearchJob, SearchPerson, SearchPost, SearchType } from "@/types/search.types";
+import SearchFilters from "@/components/search/SearchFilters";
+import type { SearchCompany, SearchFilters as SearchFilterValues, SearchJob, SearchPerson, SearchPost, SearchType } from "@/types/search.types";
 
 const PAGE_SIZE = 10;
 const categories: { id: SearchType; label: string; icon: typeof Search }[] = [
@@ -79,10 +80,10 @@ function ResultCard({ result }: { result: SearchPerson | SearchJob | SearchPost 
 function SearchPageContent() {
   const dispatch = useAppDispatch();
   const router = useRouter();
-  const { query, activeType, searchMode, page } = useAppSelector((state) => state.search);
+  const { query, activeType, searchMode, page, filters } = useAppSelector((state) => state.search);
   const [input, setInput] = useState("");
   const { currentData, isFetching, isError, refetch } = useSearchQuery(
-    { q: query, type: activeType, mode: searchMode, page, limit: PAGE_SIZE },
+    { q: query, type: activeType, mode: searchMode, page, limit: PAGE_SIZE, ...filters },
     { skip: query.trim().length === 0 }
   );
   const resultData = currentData?.data;
@@ -94,11 +95,26 @@ function SearchPageContent() {
     const mode = params.get("mode") === "smart" ? "smart" : "keyword";
     setInput(q);
     if (!q) dispatch(clearSearch());
-    else dispatch(setSearchRequest({ query: q, activeType: categories.some((item) => item.id === type) ? type! : "all", searchMode: mode, page: 1 }));
+    else {
+      const role = params.get("role");
+      const jobType = params.get("jobType");
+      const experienceLevel = params.get("experienceLevel");
+      const parsedFilters: SearchFilterValues = {
+        location: params.get("location") || undefined,
+        industry: params.get("industry") || undefined,
+        role: ["student", "professional", "recruiter", "admin"].includes(role ?? "") ? role as SearchFilterValues["role"] : undefined,
+        jobType: ["full-time", "part-time", "internship", "contract"].includes(jobType ?? "") ? jobType as SearchFilterValues["jobType"] : undefined,
+        experienceLevel: ["entry", "mid", "senior"].includes(experienceLevel ?? "") ? experienceLevel as SearchFilterValues["experienceLevel"] : undefined,
+      };
+      const requestedPage = Number(params.get("page"));
+      dispatch(setSearchRequest({ query: q, activeType: categories.some((item) => item.id === type) ? type! : "all", searchMode: mode, page: Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1, filters: parsedFilters }));
+    }
   }, [dispatch]);
 
-  const updateUrl = (next: { q: string; type: SearchType; mode: "keyword" | "smart" }) => {
+  const updateUrl = (next: { q: string; type: SearchType; mode: "keyword" | "smart"; filters?: SearchFilterValues; page?: number }) => {
     const params = new URLSearchParams({ q: next.q, type: next.type, mode: next.mode });
+    Object.entries(next.filters ?? filters).forEach(([key, value]) => { if (value) params.set(key, value); });
+    if (next.page && next.page > 1) params.set("page", String(next.page));
     router.replace(`/search?${params.toString()}`, { scroll: false });
   };
 
@@ -122,7 +138,13 @@ function SearchPageContent() {
 
   const setPage = (nextPage: number) => {
     dispatch(setSearchRequest({ page: nextPage }));
+    updateUrl({ q: query, type: activeType, mode: searchMode, filters, page: nextPage });
     window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const applyFilters = (nextFilters: SearchFilterValues) => {
+    dispatch(setSearchRequest({ filters: nextFilters, page: 1 }));
+    if (query) updateUrl({ q: query, type: activeType, mode: searchMode, filters: nextFilters });
   };
 
   return (
@@ -146,6 +168,8 @@ function SearchPageContent() {
             </div>
           </div>
 
+          {query && activeType !== "posts" && <SearchFilters key={activeType} type={activeType} filters={filters} onApply={applyFilters} />}
+
           {!query ? (
             <section className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center"><span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-primary-50 text-primary-700"><Search size={25} /></span><h2 className="mt-4 text-lg font-bold text-slate-900">Start with a search</h2><p className="mx-auto mt-1 max-w-md text-sm leading-6 text-slate-500">Search by name, skills, role, company, or opportunity. Choose Smart Match to include semantically related results.</p></section>
           ) : (
@@ -154,7 +178,7 @@ function SearchPageContent() {
               {isError ? <div role="alert" className="rounded-2xl border border-rose-200 bg-white p-8 text-center"><p className="font-semibold text-slate-900">Search is temporarily unavailable</p><p className="mt-1 text-sm text-slate-500">Please try again in a moment.</p><button type="button" onClick={() => void refetch()} className="mt-4 rounded-xl bg-primary-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-900">Try again</button></div>
                 : isFetching && !resultData ? <div role="status" className="grid min-h-48 place-items-center rounded-2xl border border-slate-200 bg-white"><LoaderCircle className="animate-spin text-primary-700" size={24} /></div>
                   : resultData?.results.length ? <div className="space-y-3">{resultData.results.map((result) => <ResultCard key={`${result._type}:${result._id}`} result={result} />)}</div>
-                    : <div className="rounded-2xl border border-slate-200 bg-white px-6 py-14 text-center"><p className="font-bold text-slate-900">No matching results</p><p className="mt-1 text-sm text-slate-500">Try another phrase or switch to Smart Match.</p></div>}
+                    : <div className="rounded-2xl border border-slate-200 bg-white px-6 py-14 text-center"><p className="font-bold text-slate-900">No matching results</p><p className="mt-1 text-sm text-slate-500">{Object.values(filters).some(Boolean) ? "Try clearing a filter or broadening your search." : "Try another phrase or switch to Smart Match."}</p>{Object.values(filters).some(Boolean) && <button type="button" onClick={() => applyFilters({})} className="mt-4 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 transition hover:bg-slate-50">Clear filters</button>}</div>}
 
               {!!resultData && resultData.pagination.totalPages > 1 && <nav aria-label="Search result pages" className="mt-4 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3"><p className="text-sm text-slate-500">Page <strong className="text-slate-800">{page}</strong> of <strong className="text-slate-800">{resultData.pagination.totalPages}</strong></p><span className="flex gap-2"><button type="button" onClick={() => setPage(page - 1)} disabled={page <= 1 || isFetching} aria-label="Previous results page" className="rounded-lg border border-slate-200 p-2 text-slate-700 hover:bg-slate-50 disabled:opacity-40"><ChevronLeft size={18} /></button><button type="button" onClick={() => setPage(page + 1)} disabled={page >= resultData.pagination.totalPages || isFetching} aria-label="Next results page" className="rounded-lg border border-slate-200 p-2 text-slate-700 hover:bg-slate-50 disabled:opacity-40"><ChevronRight size={18} /></button></span></nav>}
             </section>
