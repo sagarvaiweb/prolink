@@ -8,20 +8,9 @@ import { JobView } from "../../models/JobView.model.js";
 import ApiError from "../../utils/ApiError.js";
 import { notifyJobRemoved } from "../notification/notification.service.js";
 import { logAdminAction } from "../admin/actionLog.service.js";
-import { deleteSearchDocument, setSearchable, upsertSearchDocument } from "../search/searchDocument.service.js";
+import { deleteSearchDocument, indexJobDocument, setSearchable } from "../search/searchDocument.service.js";
 
-const indexJob = async (job, { isSearchable = job.status === "open" && job.moderationStatus === "approved" } = {}) => {
-  const company = job.postedByCompany && typeof job.postedByCompany === "object" ? job.postedByCompany : null;
-  return upsertSearchDocument({
-    entityType: "job",
-    entityId: job._id,
-    text: [job.title, job.description, ...(job.requiredSkills ?? []), job.location, job.experienceLevel, job.jobType, company?.name, company?.industry, job.isRemote ? "remote" : ""]
-      .filter(Boolean)
-      .join(" "),
-    metadata: { status: job.status, moderationStatus: job.moderationStatus },
-    isSearchable,
-  });
-};
+const indexJob = (job, options = {}) => indexJobDocument(job, options);
 
 const JOB_POPULATES = [
   {

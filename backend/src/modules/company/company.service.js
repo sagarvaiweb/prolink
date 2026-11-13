@@ -12,6 +12,7 @@ import {
   notifyCompanyStatusChanged,
 } from "../notification/notification.service.js";
 import { logAdminAction } from "../admin/actionLog.service.js";
+import { deleteSearchDocument, indexCompany } from "../search/searchDocument.service.js";
 
 const COMPANY_CREATOR_FIELDS = "firstName lastName username avatar";
 const MEMBER_USER_FIELDS = "firstName lastName username avatar role";
@@ -53,6 +54,7 @@ export const createCompany = async (user, companyData) => {
   let company;
   try {
     company = await Company.create({ ...companyData, createdBy: user._id });
+    await indexCompany(company);
     await CompanyMember.create({
       company: company._id,
       user: user._id,
@@ -63,6 +65,7 @@ export const createCompany = async (user, companyData) => {
       const cleanupResults = await Promise.allSettled([
         CompanyMember.deleteOne({ company: company._id, user: user._id }),
         Company.deleteOne({ _id: company._id }),
+        deleteSearchDocument("company", company._id),
       ]);
       cleanupResults
         .filter((result) => result.status === "rejected")
@@ -174,6 +177,7 @@ export const updateCompany = async (user, companyId, updates) => {
   Object.assign(company, updates);
   try {
     await company.save();
+    await indexCompany(company);
   } catch (error) {
     throw normalizeCompanyWriteError(error);
   }
@@ -224,6 +228,7 @@ export const deleteCompany = async (user, companyId) => {
   await Promise.all([
     CompanyMember.deleteMany({ company: company._id }),
     CompanyFollow.deleteMany({ company: company._id }),
+    deleteSearchDocument("company", company._id),
   ]);
 };
 
@@ -589,6 +594,7 @@ export const verifyCompany = async (admin, companyId, note = "") => {
   company.verificationReviewedBy = admin._id;
   company.verificationReviewedAt = new Date();
   await company.save();
+  await indexCompany(company);
 
   const memberIds = await getCompanyMemberIds(company._id);
   await notifyCompanyStatusChanged({
@@ -629,6 +635,7 @@ export const rejectCompanyVerification = async (admin, companyId, note) => {
   company.verificationReviewedBy = admin._id;
   company.verificationReviewedAt = new Date();
   await company.save();
+  await indexCompany(company);
 
   const memberIds = await getCompanyMemberIds(company._id);
   await notifyCompanyVerificationRejected({ admin, company, memberIds, note });
@@ -654,6 +661,7 @@ export const suspendCompany = async (admin, companyId) => {
   if (!wasAlreadySuspended) {
     company.isSuspended = true;
     await company.save();
+    await indexCompany(company);
   }
 
   // Company state is the source of truth for reads and new posts; close its

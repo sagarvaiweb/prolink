@@ -6,6 +6,7 @@ import { SavedPost } from "../../models/SavedPost.model.js";
 import { User } from "../../models/User.model.js";
 import ApiError from "../../utils/ApiError.js";
 import { getPostById } from "./post.service.js";
+import { indexPost } from "../search/searchDocument.service.js";
 
 const AUTHOR_FIELDS = "firstName lastName username avatar role";
 
@@ -80,6 +81,8 @@ export const sharePost = async (user, postId, shareData) => {
     }
     throw error;
   }
+
+  await indexPost(repost);
 
   await repost.populate([
     { path: "author", select: AUTHOR_FIELDS },

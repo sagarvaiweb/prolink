@@ -5,6 +5,7 @@ import { Like } from "../../models/Like.model.js";
 import { Post } from "../../models/Post.model.js";
 import { SavedPost } from "../../models/SavedPost.model.js";
 import { User } from "../../models/User.model.js";
+import { deleteSearchDocument, indexPost } from "../search/searchDocument.service.js";
 import ApiError from "../../utils/ApiError.js";
 import {
   cleanupUploadedPostMedia,
@@ -207,6 +208,7 @@ export const createPost = async (author, postData, files = []) => {
     }
     throw normalizeWriteError(error);
   }
+  await indexPost(post);
 
   await post.populate([
     { path: "author", select: AUTHOR_FIELDS },
@@ -318,6 +320,7 @@ export const updatePost = async (user, postId, updates, files = []) => {
 
     post.isEdited = true;
     await post.save();
+    await indexPost(post);
   } catch (error) {
     try {
       await cleanupUploadedPostMedia(files);
@@ -360,6 +363,7 @@ const removePost = async (post) => {
   const mediaUrls = post.mediaUrls;
   await post.deleteOne();
   await Promise.all([
+    ...relatedPostIds.map((postId) => deleteSearchDocument("post", postId)),
     Post.deleteMany({ _id: { $in: relatedPostIds.slice(1) } }),
     Like.deleteMany({ post: { $in: relatedPostIds } }),
     Comment.deleteMany({ post: { $in: relatedPostIds } }),

@@ -2,6 +2,7 @@ import { Profile } from "../../models/Profile.model.js";
 import { User } from "../../models/User.model.js";
 import { ProfileView } from "../../models/ProfileView.model.js";
 import ApiError from "../../utils/ApiError.js";
+import { indexProfile } from "../search/searchDocument.service.js";
 
 // Weighted profile completion calculation
 const calculateCompletion = (profile) => {
@@ -21,6 +22,7 @@ const findOrCreateProfile = async (userId) => {
   let profile = await Profile.findOne({ user: userId });
   if (!profile) {
     profile = await Profile.create({ user: userId });
+    await indexProfile(profile);
   }
   return profile;
 };
@@ -70,6 +72,7 @@ export const updateProfile = async (userId, updates) => {
   Object.assign(profile, updates);
   profile.profileCompletion = calculateCompletion(profile);
   await profile.save();
+  await indexProfile(profile);
 
   return profile;
 };
@@ -81,6 +84,7 @@ export const addExperience = async (userId, experienceData) => {
   profile.experience.push(experienceData);
   profile.profileCompletion = calculateCompletion(profile);
   await profile.save();
+  await indexProfile(profile);
 
   return profile;
 };
@@ -96,6 +100,7 @@ export const updateExperience = async (userId, experienceId, updates) => {
 
   Object.assign(exp, updates);
   await profile.save();
+  await indexProfile(profile);
 
   return profile;
 };
@@ -112,6 +117,7 @@ export const deleteExperience = async (userId, experienceId) => {
   exp.deleteOne();
   profile.profileCompletion = calculateCompletion(profile);
   await profile.save();
+  await indexProfile(profile);
 
   return profile;
 };
@@ -124,6 +130,7 @@ export const updateSkills = async (userId, skills) => {
   profile.skills = [...new Set(skills)];
   profile.profileCompletion = calculateCompletion(profile);
   await profile.save();
+  await indexProfile(profile);
 
   return profile;
 };
@@ -135,6 +142,7 @@ export const addEducation = async (userId, educationData) => {
   profile.education.push(educationData);
   profile.profileCompletion = calculateCompletion(profile);
   await profile.save();
+  await indexProfile(profile);
 
   return profile;
 };
@@ -150,6 +158,7 @@ export const updateEducation = async (userId, educationId, updates) => {
 
   Object.assign(edu, updates);
   await profile.save();
+  await indexProfile(profile);
 
   return profile;
 };
@@ -166,6 +175,7 @@ export const deleteEducation = async (userId, educationId) => {
   edu.deleteOne();
   profile.profileCompletion = calculateCompletion(profile);
   await profile.save();
+  await indexProfile(profile);
 
   return profile;
 };
@@ -186,6 +196,7 @@ export const uploadCoverPhoto = async (userId, fileUrl) => {
   const profile = await findOrCreateProfile(userId);
   profile.coverPhoto = fileUrl;
   await profile.save();
+  await indexProfile(profile);
   return profile;
 };
 
@@ -195,5 +206,6 @@ export const uploadResume = async (userId, fileUrl) => {
   profile.resumeUrl = fileUrl;
   profile.profileCompletion = calculateCompletion(profile);
   await profile.save();
+  await indexProfile(profile);
   return profile;
 };
