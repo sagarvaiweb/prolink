@@ -14,6 +14,7 @@ import {
   LoaderCircle,
   LogOut,
   Network,
+  Search,
   UserRound,
   Trash2,
 } from "lucide-react";
@@ -252,6 +253,7 @@ export default function NotificationCenter() {
     ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
     : "Member";
   const isFeedActive = pathname === "/feed";
+  const isSearchActive = pathname.startsWith("/search");
   const isNetworkActive = pathname.startsWith("/network");
   const isJobsActive = pathname.startsWith("/jobs");
   const isExploreActive = isNetworkActive || isJobsActive;
@@ -275,6 +277,10 @@ export default function NotificationCenter() {
           <Link href="/feed" aria-label="Feed" aria-current={isFeedActive ? "page" : undefined} onClick={() => setIsExploreOpen(false)} className={navigationLinkClass(isFeedActive)}>
             <Home size={17} />
             <span className="hidden sm:inline">Feed</span>
+          </Link>
+          <Link href="/search" aria-label="Search" aria-current={isSearchActive ? "page" : undefined} onClick={() => setIsExploreOpen(false)} className={navigationLinkClass(isSearchActive)}>
+            <Search size={17} />
+            <span className="hidden sm:inline">Search</span>
           </Link>
           <div className="relative" ref={exploreRef}>
             <button
