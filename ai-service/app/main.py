@@ -5,9 +5,12 @@ from contextlib import asynccontextmanager
 from typing import Annotated
 
 import numpy as np
+from dotenv import load_dotenv
 from fastapi import FastAPI, Header, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sentence_transformers import SentenceTransformer
+
+load_dotenv()
 
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 logger = logging.getLogger("search_embeddings")
@@ -82,7 +85,9 @@ def verify_service_token(authorization: Annotated[str | None, Header()] = None):
 
 
 @app.get("/health")
-def health():
+def health(authorization: Annotated[str | None, Header()] = None):
+    verify_service_token(authorization)
+
     if model is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -91,6 +96,7 @@ def health():
 
     return {
         "status": "ok",
+        "authentication": "configured" if AI_SERVICE_TOKEN else "disabled",
         "model": MODEL_NAME,
         "version": MODEL_VERSION,
         "dimensions": EMBEDDING_DIMENSIONS,

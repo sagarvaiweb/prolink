@@ -13,7 +13,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-Copy `ai-service/.env.example` to the service's environment and set the shared `AI_SERVICE_TOKEN`. Set these backend variables:
+From `ai-service/`, copy `.env.example` to `.env` and set `AI_SERVICE_TOKEN`. The service loads that file at startup. Set the same token in the backend environment along with these variables:
 
 ```env
 AI_SERVICE_URL=http://localhost:8000
@@ -35,7 +35,29 @@ If the AI service is unavailable during source indexing, the searchable text is 
 
 ## Backfill / repair
 
-From `backend/`, run `node src/scripts/reindexSearchDocuments.js` to process all four types, or pass one or more of `person`, `job`, `post`, and `company`. The script uses a cursor and bounded batches; it is safe to rerun. A profile maps to its owning user ID. It reports scanned and active record counts. Configure the embedding service first if vector population is wanted.
+From `backend/`, run `node src/scripts/reindexSearchDocuments.js` to process all four types, or pass one or more of `person`, `job`, `post`, and `company`. The script creates the MongoDB indexes declared by the search document and recent search models, then uses a cursor and bounded batches to refresh source records. It is safe to rerun. A profile maps to its owning user ID. At the end of each type it reports scanned and active documents, current-model embedding coverage, and missing embeddings. Configure and start the embedding service first if vector population is wanted. Invalid batch-size settings fall back to 50; larger values are capped at 500.
+
+## Operations and readiness
+
+Create both Atlas indexes from the definitions below and wait until Atlas reports each one ready. The text index handles keyword search and autocomplete; the vector index handles semantic and hybrid search. Atlas Search indexes are separate from MongoDB collection indexes, so the reindex command does not create or repair them.
+
+After configuring MongoDB, Atlas, and the optional embedding service, start the backend and call `GET /api/search/health` with an authenticated admin bearer token. The endpoint performs bounded live probes against the configured text, autocomplete, and vector indexes, checks the embedding service's authentication and model/version/dimension settings, and reports active-document embedding coverage. It does not return environment values or service credentials.
+
+- `ready`: keyword, autocomplete, vector, embedding, and coverage checks all pass.
+- `degraded`: keyword search is ready, but an optional search capability or embedding coverage needs attention.
+- `unavailable`: MongoDB or the keyword index is unavailable, so the core search workflow cannot be confirmed.
+- `disabled`: embeddings are not configured. Keyword search remains available; semantic search uses its documented keyword fallback.
+- `partial` or `empty` document coverage: rerun the backfill after the source data and embedding service are available.
+
+For repair, first inspect the individual check status and message. Correct environment mismatches or missing Atlas mappings, wait for Atlas index builds to finish, and rerun `node src/scripts/reindexSearchDocuments.js` from `backend/`. The endpoint requires the admin role in addition to normal authentication; embedding-service health checks use the configured shared token.
+
+Integration review checklist:
+
+- Confirm a non-admin account receives a forbidden response from `/api/search/health`.
+- Confirm the readiness endpoint reports a missing or building Atlas index without exposing secrets.
+- Confirm a mismatched embedding model or dimension is reported and does not count as current-model coverage.
+- Run the backfill twice and confirm the second run completes without duplicate search documents.
+- Disable the embedding service and confirm keyword search remains available with the documented fallback behavior.
 
 ## Atlas Search index
 

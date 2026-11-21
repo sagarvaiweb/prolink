@@ -8,6 +8,7 @@ import {
   recordRecentSearch,
 } from "./recentSearch.service.js";
 import { search as searchResults } from "./search.service.js";
+import { getSearchHealth as readSearchHealth } from "./search.health.service.js";
 
 export const search = asyncHandler(async (req, res) => {
   const result = await searchResults(req.user, req.validatedQuery);
@@ -51,4 +52,12 @@ export const clearRecentSearches = asyncHandler(async (req, res) => {
   res
     .status(200)
     .json(new ApiResponse(200, null, "Recent searches cleared successfully."));
+});
+
+export const getSearchHealth = asyncHandler(async (_req, res) => {
+  const result = await readSearchHealth();
+
+  res
+    .status(200)
+    .json(new ApiResponse(200, result, "Search readiness checked successfully."));
 });

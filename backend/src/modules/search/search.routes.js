@@ -1,5 +1,6 @@
 import { Router } from "express";
 import authenticateUser from "../../middlewares/authenticateUser.middleware.js";
+import authorizeRole from "../../middlewares/authorizeRoles.middleware.js";
 import { autocompleteRateLimiter } from "../../middlewares/rateLimiter.middleware.js";
 import validateParams from "../../middlewares/validateParams.middleware.js";
 import validateQuery from "../../middlewares/validateQuery.middleware.js";
@@ -8,6 +9,7 @@ import {
   clearRecentSearches,
   deleteRecentSearch,
   getRecentSearches,
+  getSearchHealth,
   search,
 } from "./search.controller.js";
 import { autocompleteQuerySchema } from "./autocomplete.validation.js";
@@ -20,6 +22,7 @@ import { searchQuerySchema } from "./search.validation.js";
 const router = Router();
 
 router.use(authenticateUser);
+router.get("/health", authorizeRole("admin"), getSearchHealth);
 router.get(
   "/autocomplete",
   autocompleteRateLimiter,
