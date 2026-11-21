@@ -11,13 +11,17 @@ import { dashboardApi } from "./features/dashboard/dashboardApi";
 import companiesReducer from "./features/companies/companiesSlice";
 import { companiesApi } from "./features/companies/companiesApi";
 import { adminApi } from "./features/admin/adminApi";
+import searchReducer from "./features/search/searchSlice";
+import { searchApi } from "./features/search/searchApi";
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
     companies: companiesReducer,
+    search: searchReducer,
     [companiesApi.reducerPath]: companiesApi.reducer,
     [adminApi.reducerPath]: adminApi.reducer,
+    [searchApi.reducerPath]: searchApi.reducer,
     [authApi.reducerPath]: authApi.reducer,
     [profileApi.reducerPath]: profileApi.reducer,
     [networkApi.reducerPath]: networkApi.reducer,
@@ -38,7 +42,8 @@ export const store = configureStore({
       notificationsApi.middleware,
       dashboardApi.middleware,
       companiesApi.middleware,
-      adminApi.middleware
+      adminApi.middleware,
+      searchApi.middleware
     ),
 });
 
