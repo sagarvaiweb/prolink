@@ -15,6 +15,7 @@ import SearchEmptyState from "@/components/search/SearchEmptyState";
 import SearchAutocomplete from "@/components/search/SearchAutocomplete";
 import SearchFilters from "@/components/search/SearchFilters";
 import SearchLoading from "@/components/search/SearchLoading";
+import SearchModeSelect from "@/components/search/SearchModeSelect";
 import RecentSearches from "@/components/search/RecentSearches";
 import SearchResults from "@/components/search/SearchResults";
 import { useSearchQuery } from "@/redux/features/search/searchApi";
@@ -42,12 +43,6 @@ const categories: { value: SearchCategory; label: string }[] = [
   { value: "jobs", label: "Jobs" },
   { value: "posts", label: "Posts" },
   { value: "companies", label: "Companies" },
-];
-
-const modes: { value: SearchMode; label: string }[] = [
-  { value: "hybrid", label: "Smart Match" },
-  { value: "keyword", label: "Keyword" },
-  { value: "semantic", label: "Semantic" },
 ];
 
 const categoriesSet = new Set<SearchCategory>([
@@ -381,20 +376,7 @@ function SearchPageContent() {
                     “{query}”
                   </p>
                 </div>
-                <label className="flex items-center gap-3 text-sm font-semibold text-slate-600">
-                  <span>Search mode</span>
-                  <select
-                    value={searchMode}
-                    onChange={(event) => updateMode(event.target.value as SearchMode)}
-                    className="h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-800 outline-none focus:border-primary-400 focus:ring-4 focus:ring-primary-100"
-                  >
-                    {modes.map((mode) => (
-                      <option key={mode.value} value={mode.value}>
-                        {mode.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <SearchModeSelect value={searchMode} onChange={updateMode} />
               </div>
 
               <div
@@ -472,7 +454,11 @@ function SearchPageContent() {
                       </p>
                     )}
                   </div>
-                  <SearchResults results={result.results} />
+                  <SearchResults
+                    results={result.results}
+                    startRank={(page - 1) * PAGE_SIZE + 1}
+                    mode={result.mode}
+                  />
                   {result.pagination.totalPages > 1 && (
                     <nav
                       aria-label="Search result pages"

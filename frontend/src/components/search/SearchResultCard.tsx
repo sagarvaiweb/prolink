@@ -8,7 +8,7 @@ import {
   UserRound,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import type { SearchResult } from "@/types/search.types";
+import type { SearchMode, SearchResult } from "@/types/search.types";
 
 const entityLabels = {
   person: "Person",
@@ -130,7 +130,15 @@ function ResultImage({ result }: { result: SearchResult }) {
   );
 }
 
-export default function SearchResultCard({ result }: { result: SearchResult }) {
+export default function SearchResultCard({
+  result,
+  rank,
+  mode,
+}: {
+  result: SearchResult;
+  rank: number;
+  mode: SearchMode;
+}) {
   const href = resultHref(result);
   const companyName =
     result.entityType === "job" ? result.data.company?.name : undefined;
@@ -155,6 +163,26 @@ export default function SearchResultCard({ result }: { result: SearchResult }) {
                 <BadgeCheck size={15} /> Verified
               </span>
             )}
+            {mode === "semantic" && Number.isFinite(result.score) && (
+              <span
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[11px] text-violet-800"
+                title="Vector similarity ranking signal, not a probability or percentage"
+              >
+                <span className="font-medium text-violet-700">Similarity</span>
+                <span className="font-bold tabular-nums">{result.score.toFixed(2)}</span>
+              </span>
+            )}
+            <span
+              className={`ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${
+                rank === 1
+                  ? "bg-amber-50 text-amber-800 ring-1 ring-amber-200"
+                  : "bg-primary-50 text-primary-800"
+              }`}
+              title={rank === 1 ? "Top search result" : `Search result ${rank}`}
+            >
+              {rank === 1 && <span>Top match</span>}
+              #{rank}
+            </span>
           </div>
           <Link
             href={href}
