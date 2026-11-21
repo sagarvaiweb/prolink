@@ -61,6 +61,17 @@ const profileSchema = new Schema(
   { timestamps: true }
 );
 
-profileSchema.plugin(searchSyncPlugin);
+profileSchema.plugin(searchSyncPlugin, {
+  searchableFields: [
+    "user",
+    "headline",
+    "bio",
+    "location",
+    "skills",
+    "experience",
+    "education",
+    "visibility",
+  ],
+});
 
 export const Profile =  mongoose.model("Profile", profileSchema);

@@ -16,7 +16,7 @@ SEARCH_AI_TIMEOUT_MS=3000
 SEARCH_REINDEX_BATCH_SIZE=50
 ```
 
-Without `AI_SERVICE_URL`, documents are indexed as text with no vector. With it configured, upserts and backfill request embeddings from `POST /embeddings`; invalid response dimensions fail the sync and are logged for later retry. Keep the AI credential only in the backend environment.
+Without `AI_SERVICE_URL`, documents are indexed as text with no vector. With it configured, upserts and backfill request embeddings from `POST /embeddings`. If the service fails or returns vectors with the wrong dimensions, the text is still indexed and the vector is omitted. Rerun the reindex script after the service is available to populate missing vectors. Keep the AI credential only in the backend environment.
 
 ## Backfill / repair
 
@@ -32,17 +32,24 @@ Create an Atlas Search index on `searchdocuments`, named `searchdocument_text_in
     "dynamic": false,
     "fields": {
       "searchableText": { "type": "string", "analyzer": "lucene.standard" },
-      "entityType": { "type": "token" },
+      "entityType": { "type": "token", "normalizer": "lowercase" },
       "isActive": { "type": "boolean" },
       "metadata": {
         "type": "document",
         "fields": {
-          "location": { "type": "string", "analyzer": "lucene.keyword" },
-          "skills": { "type": "string", "analyzer": "lucene.keyword" },
-          "experienceLevel": { "type": "token" },
-          "employmentType": { "type": "token" },
-          "industry": { "type": "string", "analyzer": "lucene.keyword" },
-          "visibility": { "type": "token" }
+          "role": { "type": "token", "normalizer": "lowercase" },
+          "title": { "type": "token", "normalizer": "lowercase" },
+          "location": { "type": "token", "normalizer": "lowercase" },
+          "skills": { "type": "token", "normalizer": "lowercase" },
+          "experienceLevel": { "type": "token", "normalizer": "lowercase" },
+          "employmentType": { "type": "token", "normalizer": "lowercase" },
+          "salaryRange": { "type": "token", "normalizer": "lowercase" },
+          "industry": { "type": "token", "normalizer": "lowercase" },
+          "visibility": { "type": "token", "normalizer": "lowercase" },
+          "authorId": { "type": "objectId" },
+          "postedById": { "type": "objectId" },
+          "companyId": { "type": "objectId" },
+          "createdAt": { "type": "date" }
         }
       }
     }
@@ -63,10 +70,23 @@ Create an Atlas Vector Search index on `searchdocuments`, named `searchdocument_
     { "type": "filter", "path": "metadata.location" },
     { "type": "filter", "path": "metadata.experienceLevel" },
     { "type": "filter", "path": "metadata.employmentType" },
+    { "type": "filter", "path": "metadata.salaryRange" },
     { "type": "filter", "path": "metadata.industry" },
-    { "type": "filter", "path": "metadata.visibility" }
+    { "type": "filter", "path": "metadata.visibility" },
+    { "type": "filter", "path": "metadata.role" },
+    { "type": "filter", "path": "metadata.title" },
+    { "type": "filter", "path": "metadata.authorId" },
+    { "type": "filter", "path": "metadata.postedById" },
+    { "type": "filter", "path": "metadata.companyId" },
+    { "type": "filter", "path": "metadata.createdAt" }
   ]
 }
 ```
 
 The model output dimension, `SEARCH_VECTOR_DIMENSIONS`, and Atlas vector index dimension must match. Model changes require a new embedding version and a full reindex.
+
+After adding the role, title, salary, author, company, or date metadata fields, update the Atlas Search index mapping and rerun the backfill so existing documents gain those fields.
+
+## Keyword search API
+
+`GET /api/search` requires a bearer token. It supports `q`, comma-separated `type`, `mode=keyword`, `page`, `limit`, and filters for location, skills, role, headline/title, job experience level, employment type, the job's exact `salaryRange` text, industry, post author, post date range, and public post visibility. The endpoint queries Atlas Search, batch-loads the source records, rechecks current visibility and status, then returns only safe display fields. Semantic and hybrid modes are added in the next backend part.

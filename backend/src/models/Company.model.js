@@ -127,6 +127,8 @@ companySchema.pre("validate", function () {
 companySchema.index({ nameKey: 1 }, { unique: true });
 companySchema.index({ isSuspended: 1, nameKey: 1 });
 companySchema.index({ verificationStatus: 1, isSuspended: 1, createdAt: 1, _id: 1 });
-companySchema.plugin(searchSyncPlugin);
+companySchema.plugin(searchSyncPlugin, {
+  searchableFields: ["name", "description", "industry", "location", "isSuspended"],
+});
 
 export const Company = model("Company", companySchema);

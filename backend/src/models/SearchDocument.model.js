@@ -30,6 +30,14 @@ const searchDocumentSchema = new Schema(
       default: null,
     },
     metadata: {
+      role: {
+        type: String,
+        default: null,
+      },
+      title: {
+        type: String,
+        default: null,
+      },
       location: {
         type: String,
         default: null,
@@ -46,12 +54,32 @@ const searchDocumentSchema = new Schema(
         type: String,
         default: null,
       },
+      salaryRange: {
+        type: String,
+        default: null,
+      },
       industry: {
         type: String,
         default: null,
       },
       visibility: {
         type: String,
+        default: null,
+      },
+      authorId: {
+        type: Schema.Types.ObjectId,
+        default: null,
+      },
+      postedById: {
+        type: Schema.Types.ObjectId,
+        default: null,
+      },
+      companyId: {
+        type: Schema.Types.ObjectId,
+        default: null,
+      },
+      createdAt: {
+        type: Date,
         default: null,
       },
     },

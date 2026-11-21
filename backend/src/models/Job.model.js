@@ -66,6 +66,18 @@ jobSchema.index({ postedByCompany: 1, status: 1, createdAt: -1 });
 jobSchema.index({ postedByUser: 1, createdAt: -1 });
 jobSchema.index({ requiredSkills: 1, status: 1 });
 jobSchema.index({ jobType: 1, experienceLevel: 1, status: 1 });
-jobSchema.plugin(searchSyncPlugin);
+jobSchema.plugin(searchSyncPlugin, {
+  searchableFields: [
+    "title",
+    "description",
+    "requiredSkills",
+    "experienceLevel",
+    "jobType",
+    "location",
+    "postedByCompany",
+    "status",
+    "moderationStatus",
+  ],
+});
 
 export const Job = model("Job", jobSchema);

@@ -83,11 +83,22 @@ const requestEmbeddings = async (texts) => {
   }
 };
 
+const embedSafely = async (texts) => {
+  if (!process.env.AI_SERVICE_URL) return null;
+
+  try {
+    return await requestEmbeddings(texts);
+  } catch (error) {
+    console.error("Search embeddings are unavailable; saving text only.", error);
+    return null;
+  }
+};
+
 const buildPersonDocument = async (userId) => {
   const [profile, user] = await Promise.all([
     Profile.findOne({ user: userId }).lean(),
     User.findById(userId)
-      .select("firstName lastName username accountStatus")
+      .select("firstName lastName username role accountStatus")
       .lean(),
   ]);
 
@@ -135,6 +146,8 @@ const buildPersonDocument = async (userId) => {
       profile.location
     ),
     metadata: {
+      role: user.role || null,
+      title: profile.headline || null,
       location: profile.location || null,
       skills,
       visibility: profile.visibility || "public",
@@ -154,6 +167,16 @@ const buildJobDocument = async (jobId) => {
     !(await Company.exists({ _id: job.postedByCompany, isSuspended: false }))
   ) {
     return null;
+  }
+
+  if (!job.postedByCompany) {
+    const posterId = job.postedByUser || job.postedBy;
+    if (
+      !posterId ||
+      !(await User.exists({ _id: posterId, accountStatus: "active" }))
+    ) {
+      return null;
+    }
   }
 
   const company = job.postedByCompany
@@ -187,7 +210,12 @@ const buildJobDocument = async (jobId) => {
       skills: requiredSkills,
       experienceLevel: job.experienceLevel || null,
       employmentType: job.jobType || null,
+      salaryRange: job.salaryRange || null,
       industry: company?.industry || null,
+      postedById: job.postedByCompany
+        ? null
+        : job.postedByUser || job.postedBy || null,
+      companyId: job.postedByCompany || null,
     },
   };
 };
@@ -207,7 +235,11 @@ const buildPostDocument = async (postId) => {
     entityId: postId,
     entityType: "post",
     searchableText: makeText("Post Content:", post.content),
-    metadata: { visibility: post.visibility },
+    metadata: {
+      visibility: post.visibility,
+      authorId: post.author,
+      createdAt: post.createdAt,
+    },
   };
 };
 
@@ -281,9 +313,9 @@ export const syncEntity = async (type, id) => {
   }
 
   let embedding = null;
+  const result = await embedSafely([document.searchableText]);
 
-  if (process.env.AI_SERVICE_URL) {
-    const result = await requestEmbeddings([document.searchableText]);
+  if (result) {
     embedding = {
       vector: result.vectors[0],
       model: result.model,
@@ -295,13 +327,28 @@ export const syncEntity = async (type, id) => {
   return { indexed: true, embedded: Boolean(embedding) };
 };
 
-export const syncModelEntities = async (modelName, ids) => {
+export const syncModelEntities = async (modelName, ids, options = {}) => {
   const type = MODEL_TYPES[modelName];
   if (!type) return;
 
   for (const id of [...new Set(ids.map(String))]) {
     try {
       await syncEntity(type, id);
+
+      if (options.syncRelatedPosts && modelName === "User") {
+        await syncRelatedEntities("post", Post, { author: id });
+      }
+
+      if (options.syncRelatedUserJobs && modelName === "User") {
+        await syncRelatedEntities("job", Job, {
+          postedByCompany: null,
+          $or: [{ postedBy: id }, { postedByUser: id }],
+        });
+      }
+
+      if (options.syncRelatedJobs && modelName === "Company") {
+        await syncRelatedEntities("job", Job, { postedByCompany: id });
+      }
     } catch (error) {
       console.error(`Could not sync ${type} search document ${id}.`, error);
     }
@@ -312,10 +359,38 @@ export const deactivateModelEntities = async (modelName, ids) => {
   const type = MODEL_TYPES[modelName];
   if (!type || !ids.length) return;
 
+  const filters = [{ entityType: type, entityId: { $in: ids } }];
+
+  if (modelName === "User") {
+    filters.push({ entityType: "post", "metadata.authorId": { $in: ids } });
+    filters.push({ entityType: "job", "metadata.postedById": { $in: ids } });
+  }
+
+  if (modelName === "Company") {
+    filters.push({ entityType: "job", "metadata.companyId": { $in: ids } });
+  }
+
   await SearchDocument.updateMany(
-    { entityType: type, entityId: { $in: ids } },
+    { $or: filters },
     { $set: { isActive: false } }
   );
+};
+
+const syncRelatedEntities = async (type, model, filter) => {
+  const batchSize = 50;
+  const cursor = model.find(filter).select("_id").lean().cursor();
+  let batch = [];
+
+  for await (const record of cursor) {
+    batch.push(record);
+
+    if (batch.length >= batchSize) {
+      await syncBatch(type, batch);
+      batch = [];
+    }
+  }
+
+  if (batch.length) await syncBatch(type, batch);
 };
 
 export const syncBatch = async (type, records) => {
@@ -333,14 +408,10 @@ export const syncBatch = async (type, records) => {
 
   if (!documents.length) return 0;
 
-  let vectors = null;
-
-  if (process.env.AI_SERVICE_URL) {
-    const result = await requestEmbeddings(
-      documents.map(({ searchableText }) => searchableText)
-    );
-    vectors = result.vectors;
-  }
+  const embeddingResult = await embedSafely(
+    documents.map(({ searchableText }) => searchableText)
+  );
+  const vectors = embeddingResult?.vectors;
 
   const operations = documents.map((document, index) => {
     const vector = vectors?.[index];
@@ -348,7 +419,7 @@ export const syncBatch = async (type, records) => {
       $set: {
         ...document,
         isActive: true,
-        embeddingModel: vector ? EMBEDDING_MODEL : null,
+        embeddingModel: vector ? embeddingResult.model : null,
         embeddingVersion: vector ? EMBEDDING_VERSION : null,
         ...(vector ? { embedding: vector } : {}),
       },

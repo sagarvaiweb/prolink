@@ -82,6 +82,14 @@ const userSchema = new Schema(
   { timestamps: true } // adds createdAt, updatedAt automatically
 );
 
-userSchema.plugin(searchSyncPlugin);
+userSchema.plugin(searchSyncPlugin, {
+  searchableFields: [
+    "firstName",
+    "lastName",
+    "username",
+    "role",
+    "accountStatus",
+  ],
+});
 
 export const User = mongoose.model("User", userSchema);
