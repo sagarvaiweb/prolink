@@ -47,6 +47,13 @@ export interface SearchAutocompleteResponse {
   suggestions: SearchSuggestion[];
 }
 
+export interface RecentSearchEntry {
+  id: string;
+  query: string;
+  entityTypes: SearchCategory[];
+  searchedAt: string;
+}
+
 export interface SearchPagination {
   page: number;
   limit: number;

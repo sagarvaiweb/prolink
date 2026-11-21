@@ -15,6 +15,7 @@ import SearchEmptyState from "@/components/search/SearchEmptyState";
 import SearchAutocomplete from "@/components/search/SearchAutocomplete";
 import SearchFilters from "@/components/search/SearchFilters";
 import SearchLoading from "@/components/search/SearchLoading";
+import RecentSearches from "@/components/search/RecentSearches";
 import SearchResults from "@/components/search/SearchResults";
 import { useSearchQuery } from "@/redux/features/search/searchApi";
 import {
@@ -238,6 +239,23 @@ function SearchPageContent() {
     } satisfies SearchState;
     dispatch(setSearchPage(1));
     updateUrl(next);
+  };
+
+  const handleRecentSearch = (
+    nextQuery: string,
+    category: SearchCategory
+  ) => {
+    dispatch(setActiveType(category));
+    dispatch(setFilters({}));
+    dispatch(setQuery(nextQuery));
+    dispatch(setSearchPage(1));
+    updateUrl({
+      query: nextQuery,
+      activeType: category,
+      searchMode,
+      activeFilters: {},
+      page: 1,
+    });
   };
 
   const updateCategory = (type: SearchCategory) => {
@@ -477,17 +495,20 @@ function SearchPageContent() {
           )}
 
           {!hasSubmitted && (
-            <div className="mt-7 rounded-2xl border border-slate-200 bg-white px-6 py-10 text-center shadow-sm">
-              <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-primary-50 text-primary-800">
-                <Search size={21} />
-              </span>
-              <h2 className="mt-4 text-lg font-bold text-slate-900">
-                Start with a name, skill, or idea
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-500">
-                Smart Match combines keyword and meaning-based search. Choose Keyword for exact terms.
-              </p>
-            </div>
+            <>
+              <div className="mt-7 rounded-2xl border border-slate-200 bg-white px-6 py-10 text-center shadow-sm">
+                <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-primary-50 text-primary-800">
+                  <Search size={21} />
+                </span>
+                <h2 className="mt-4 text-lg font-bold text-slate-900">
+                  Start with a name, skill, or idea
+                </h2>
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                  Smart Match combines keyword and meaning-based search. Choose Keyword for exact terms.
+                </p>
+              </div>
+              <RecentSearches onSelect={handleRecentSearch} />
+            </>
           )}
         </div>
       </main>
