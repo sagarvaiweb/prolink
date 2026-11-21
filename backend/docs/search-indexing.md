@@ -4,19 +4,34 @@
 
 ## Embeddings
 
-Set these backend variables when the embedding service is available:
+The FastAPI service lives in `ai-service/` and requires Python 3.10 or newer. Install its requirements and start it from that directory:
+
+```bash
+python -m venv .venv
+# Activate the virtual environment for your shell, then:
+pip install -r requirements.txt
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+Copy `ai-service/.env.example` to the service's environment and set the shared `AI_SERVICE_TOKEN`. Set these backend variables:
 
 ```env
 AI_SERVICE_URL=http://localhost:8000
-AI_SERVICE_TOKEN=
+AI_SERVICE_TOKEN=replace-with-the-same-secret
 SEARCH_EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 SEARCH_EMBEDDING_VERSION=v1
 SEARCH_VECTOR_DIMENSIONS=384
 SEARCH_AI_TIMEOUT_MS=3000
 SEARCH_REINDEX_BATCH_SIZE=50
+SEARCH_TEXT_INDEX=searchdocument_text_index
+SEARCH_VECTOR_INDEX=searchdocument_vector_index
+SEARCH_RRF_K=60
+SEARCH_CANDIDATE_POOL=100
 ```
 
-Without `AI_SERVICE_URL`, documents are indexed as text with no vector. With it configured, upserts and backfill request embeddings from `POST /embeddings`. If the service fails or returns vectors with the wrong dimensions, the text is still indexed and the vector is omitted. Rerun the reindex script after the service is available to populate missing vectors. Keep the AI credential only in the backend environment.
+The service loads the model once at startup. `GET /health` reports readiness and model dimensions; `POST /embeddings` accepts a bounded batch of texts and returns vectors, model, version, and dimensions. The backend checks all four before saving or searching with a vector. Keep the shared service token in backend and AI-service environments only.
+
+If the AI service is unavailable during source indexing, the searchable text is still saved and the stale vector is removed. Once the service is available, rerun the backfill to populate vectors. If it is unavailable during a semantic or hybrid request, the API returns keyword results with `fallbackUsed: true` and `mode: "keyword"`.
 
 ## Backfill / repair
 
@@ -67,6 +82,8 @@ Create an Atlas Vector Search index on `searchdocuments`, named `searchdocument_
     { "type": "vector", "path": "embedding", "numDimensions": 384, "similarity": "cosine" },
     { "type": "filter", "path": "entityType" },
     { "type": "filter", "path": "isActive" },
+    { "type": "filter", "path": "embeddingModel" },
+    { "type": "filter", "path": "embeddingVersion" },
     { "type": "filter", "path": "metadata.location" },
     { "type": "filter", "path": "metadata.experienceLevel" },
     { "type": "filter", "path": "metadata.employmentType" },
@@ -87,6 +104,6 @@ The model output dimension, `SEARCH_VECTOR_DIMENSIONS`, and Atlas vector index d
 
 After adding the role, title, salary, author, company, or date metadata fields, update the Atlas Search index mapping and rerun the backfill so existing documents gain those fields.
 
-## Keyword search API
+## Search API
 
-`GET /api/search` requires a bearer token. It supports `q`, comma-separated `type`, `mode=keyword`, `page`, `limit`, and filters for location, skills, role, headline/title, job experience level, employment type, the job's exact `salaryRange` text, industry, post author, post date range, and public post visibility. The endpoint queries Atlas Search, batch-loads the source records, rechecks current visibility and status, then returns only safe display fields. Semantic and hybrid modes are added in the next backend part.
+`GET /api/search` requires a bearer token. It supports `q`, comma-separated `type`, `mode=keyword|semantic|hybrid` (default `hybrid`), `page`, `limit`, and filters for location, skills, role, headline/title, job experience level, employment type, the job's exact `salaryRange` text, industry, post author, post date range, and public post visibility. Keyword mode uses Atlas Search. Semantic mode uses the request embedding and Atlas Vector Search. Hybrid mode fuses both ranked lists with reciprocal rank fusion (RRF). Every mode batch-loads source records and rechecks current visibility and status before returning safe fields. The response reports the mode actually used and sets `fallbackUsed: true` when it falls back to keyword search. For semantic and hybrid modes, `pagination.total` reflects the bounded candidate set retrieved for ranking rather than a corpus-wide exact count.

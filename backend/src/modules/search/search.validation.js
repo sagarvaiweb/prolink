@@ -49,7 +49,7 @@ export const searchQuerySchema = Joi.object({
       "any.required": "Please enter a search term.",
     }),
   type: Joi.string().trim().default("all").custom(parseTypes),
-  mode: Joi.string().valid("keyword").default("keyword"),
+  mode: Joi.string().valid("keyword", "semantic", "hybrid").default("hybrid"),
   sort: Joi.string().valid("relevance").default("relevance"),
   page: Joi.number().integer().min(1).max(100).default(1),
   limit: Joi.number().integer().min(1).max(50).default(10),

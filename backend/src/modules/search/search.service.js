@@ -6,6 +6,11 @@ import { Profile } from "../../models/Profile.model.js";
 import { SearchDocument } from "../../models/SearchDocument.model.js";
 import { User } from "../../models/User.model.js";
 import ApiError from "../../utils/ApiError.js";
+import {
+  createEmbeddings,
+  getSearchEmbeddingConfig,
+} from "./search.embedding.service.js";
+import { reciprocalRankFusion } from "./search.ranking.service.js";
 
 const ENTITY_TYPES = {
   people: "person",
@@ -30,8 +35,16 @@ const FILTERS_BY_TYPE = {
 
 const SEARCH_INDEX =
   process.env.SEARCH_TEXT_INDEX || "searchdocument_text_index";
+const VECTOR_INDEX =
+  process.env.SEARCH_VECTOR_INDEX || "searchdocument_vector_index";
+const configuredRrfConstant = Number(process.env.SEARCH_RRF_K || 60);
+const RRF_CONSTANT =
+  Number.isFinite(configuredRrfConstant) && configuredRrfConstant > 0
+    ? configuredRrfConstant
+    : 60;
+const MAX_CANDIDATES = 10000;
 
-const buildTypeFilter = (type, query) => {
+const buildAtlasTypeFilter = (type, query) => {
   const supportedFilters = FILTERS_BY_TYPE[type];
   let dateRangeAdded = false;
   const filters = [
@@ -78,7 +91,7 @@ const buildTypeFilter = (type, query) => {
   return { compound: { filter: filters } };
 };
 
-const buildSearchQuery = (query) => {
+const getSearchBranches = (query) => {
   const providedFilters = Object.values(FILTERS_BY_TYPE)
     .flat()
     .filter((filter, index, filters) =>
@@ -86,35 +99,75 @@ const buildSearchQuery = (query) => {
     );
   const selectedTypes =
     query.type === "all" ? Object.keys(ENTITY_TYPES) : query.type.split(",");
-  const branches = selectedTypes
+  return selectedTypes
     .filter((type) =>
       providedFilters.every((filter) => FILTERS_BY_TYPE[type].includes(filter))
-    )
-    .map((type) => buildTypeFilter(type, query));
+    );
+};
 
-  const activeFilter = {
-    equals: {
-      path: "isActive",
-      value: true,
-    },
-  };
-
-  return {
-    index: SEARCH_INDEX,
-    compound: {
-      must: [
-        {
-          text: {
-            path: "searchableText",
-            query: query.q,
-          },
+const buildKeywordSearchQuery = (query, types) => ({
+  index: SEARCH_INDEX,
+  compound: {
+    must: [
+      {
+        text: {
+          path: "searchableText",
+          query: query.q,
         },
-      ],
-      filter: [activeFilter],
-      should: branches,
-      minimumShouldMatch: 1,
-    },
-  };
+      },
+    ],
+    filter: [
+      {
+        equals: {
+          path: "isActive",
+          value: true,
+        },
+      },
+    ],
+    should: types.map((type) => buildAtlasTypeFilter(type, query)),
+    minimumShouldMatch: 1,
+  },
+});
+
+const buildVectorTypeFilter = (type, query) => {
+  const filters = [{ entityType: ENTITY_TYPES[type] }];
+
+  for (const filter of FILTERS_BY_TYPE[type]) {
+    if (query[filter] === undefined) continue;
+
+    if (filter === "skills") {
+      filters.push({ "metadata.skills": { $in: query.skills } });
+    } else if (filter === "dateFrom" || filter === "dateTo") {
+      if (filters.some((item) => item["metadata.createdAt"])) continue;
+      filters.push({
+        "metadata.createdAt": {
+          ...(query.dateFrom ? { $gte: query.dateFrom } : {}),
+          ...(query.dateTo ? { $lte: query.dateTo } : {}),
+        },
+      });
+    } else if (filter === "author") {
+      filters.push({
+        "metadata.authorId": new mongoose.Types.ObjectId(query.author),
+      });
+    } else {
+      filters.push({ [`metadata.${filter}`]: query[filter] });
+    }
+  }
+
+  return { $and: filters };
+};
+
+const buildVectorSearchFilter = (query, types) => {
+  const embeddingConfig = getSearchEmbeddingConfig();
+  const typeFilters = types.map((type) => buildVectorTypeFilter(type, query));
+  const filters = [
+    { isActive: true },
+    { embeddingModel: embeddingConfig.model },
+    { embeddingVersion: embeddingConfig.version },
+    typeFilters.length === 1 ? typeFilters[0] : { $or: typeFilters },
+  ];
+
+  return { $and: filters };
 };
 
 const getEntityIds = (candidates, type) =>
@@ -348,31 +401,22 @@ const hydrateCandidates = async (candidates, requester) => {
     .filter(Boolean);
 };
 
-export const searchKeyword = async (requester, query) => {
-  if (requester.accountStatus !== "active") {
-    throw new ApiError(403, "Your account is not active.");
-  }
-
-  const search = buildSearchQuery(query);
-  const noMatchingType = search.compound.should.length === 0;
-
-  if (noMatchingType) {
-    return {
-      query: query.q,
-      mode: "keyword",
-      fallbackUsed: false,
-      results: [],
-      pagination: {
-        page: query.page,
-        limit: query.limit,
-        total: 0,
-        totalPages: 0,
-      },
-    };
-  }
-
+const getCandidateLimit = (query) => {
   const skip = (query.page - 1) * query.limit;
-  const candidateLimit = Math.min(Math.max((skip + query.limit) * 3, 50), 15000);
+  const configuredPool = Number(process.env.SEARCH_CANDIDATE_POOL || 100);
+  const candidatePool =
+    Number.isFinite(configuredPool) && configuredPool > 0
+      ? Math.max(20, configuredPool)
+      : 100;
+
+  return Math.min(
+    MAX_CANDIDATES,
+    Math.max((skip + query.limit) * 3, candidatePool)
+  );
+};
+
+const runKeywordSearch = async (query, types, candidateLimit) => {
+  const search = buildKeywordSearchQuery(query, types);
   const [candidates, countResult] = await Promise.all([
     SearchDocument.aggregate([
       { $search: search },
@@ -395,15 +439,70 @@ export const searchKeyword = async (requester, query) => {
     ]),
   ]);
 
+  return {
+    candidates,
+    total: countResult[0]?.count?.total || 0,
+  };
+};
+
+const runVectorSearch = async (query, types, embedding, candidateLimit) => {
+  const numCandidates = Math.min(
+    MAX_CANDIDATES,
+    Math.max(candidateLimit * 10, 100)
+  );
+  const candidates = await SearchDocument.aggregate([
+    {
+      $vectorSearch: {
+        index: VECTOR_INDEX,
+        path: "embedding",
+        queryVector: embedding,
+        numCandidates,
+        limit: candidateLimit,
+        filter: buildVectorSearchFilter(query, types),
+      },
+    },
+    {
+      $project: {
+        entityId: 1,
+        entityType: 1,
+        score: { $meta: "vectorSearchScore" },
+      },
+    },
+  ]);
+
+  return candidates;
+};
+
+const createEmptyResult = (query, mode) => ({
+  query: query.q,
+  mode,
+  fallbackUsed: false,
+  results: [],
+  pagination: {
+    page: query.page,
+    limit: query.limit,
+    total: 0,
+    totalPages: 0,
+  },
+});
+
+const createSearchResult = async (
+  requester,
+  query,
+  candidates,
+  total,
+  mode,
+  fallbackUsed = false
+) => {
+  const skip = (query.page - 1) * query.limit;
   const hydrated = await hydrateCandidates(candidates, requester);
-  const results = hydrated.slice(skip, skip + query.limit);
-  const total = countResult[0]?.count?.total || 0;
 
   return {
     query: query.q,
-    mode: "keyword",
-    fallbackUsed: false,
-    results,
+    mode,
+    fallbackUsed,
+    ...(fallbackUsed ? { requestedMode: query.mode } : {}),
+    results: hydrated.slice(skip, skip + query.limit),
     pagination: {
       page: query.page,
       limit: query.limit,
@@ -411,4 +510,121 @@ export const searchKeyword = async (requester, query) => {
       totalPages: Math.ceil(total / query.limit),
     },
   };
+};
+
+const fallbackToKeyword = async (
+  requester,
+  query,
+  types,
+  candidateLimit,
+  error,
+  keywordResult
+) => {
+  console.error(
+    `Search ${query.mode} mode failed; returning keyword results.`,
+    error
+  );
+  const keyword =
+    keywordResult || (await runKeywordSearch(query, types, candidateLimit));
+
+  return createSearchResult(
+    requester,
+    query,
+    keyword.candidates,
+    keyword.total,
+    "keyword",
+    true
+  );
+};
+
+export const search = async (requester, query) => {
+  if (requester.accountStatus !== "active") {
+    throw new ApiError(403, "Your account is not active.");
+  }
+
+  const types = getSearchBranches(query);
+  if (!types.length) return createEmptyResult(query, query.mode);
+
+  const candidateLimit = getCandidateLimit(query);
+  if (query.mode === "keyword") {
+    const keyword = await runKeywordSearch(query, types, candidateLimit);
+    return createSearchResult(
+      requester,
+      query,
+      keyword.candidates,
+      keyword.total,
+      "keyword"
+    );
+  }
+
+  let embedding;
+  try {
+    const result = await createEmbeddings([query.q]);
+    embedding = result.embeddings[0];
+  } catch (error) {
+    return fallbackToKeyword(
+      requester,
+      query,
+      types,
+      candidateLimit,
+      error.message
+    );
+  }
+
+  if (query.mode === "semantic") {
+    try {
+      const candidates = await runVectorSearch(
+        query,
+        types,
+        embedding,
+        candidateLimit
+      );
+      return createSearchResult(
+        requester,
+        query,
+        candidates,
+        candidates.length,
+        "semantic"
+      );
+    } catch (error) {
+      return fallbackToKeyword(
+        requester,
+        query,
+        types,
+        candidateLimit,
+        error.message
+      );
+    }
+  }
+
+  const keyword = await runKeywordSearch(query, types, candidateLimit);
+  try {
+    const semantic = await runVectorSearch(
+      query,
+      types,
+      embedding,
+      candidateLimit
+    );
+    const rankedCandidates = reciprocalRankFusion(
+      [keyword.candidates, semantic],
+      RRF_CONSTANT
+    );
+
+    return createSearchResult(
+      requester,
+      query,
+      rankedCandidates,
+      rankedCandidates.length,
+      "hybrid"
+    );
+  } catch (error) {
+    return fallbackToKeyword(
+      requester,
+      query,
+      types,
+      candidateLimit,
+      error.message,
+      keyword
+    );
+  }
 };

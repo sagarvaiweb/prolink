@@ -4,6 +4,10 @@ import { Post } from "../../models/Post.model.js";
 import { Profile } from "../../models/Profile.model.js";
 import { SearchDocument } from "../../models/SearchDocument.model.js";
 import { User } from "../../models/User.model.js";
+import {
+  createEmbeddings,
+  getSearchEmbeddingConfig,
+} from "./search.embedding.service.js";
 
 const MODEL_TYPES = {
   Profile: "person",
@@ -13,12 +17,7 @@ const MODEL_TYPES = {
   Company: "company",
 };
 
-const EMBEDDING_MODEL =
-  process.env.SEARCH_EMBEDDING_MODEL ||
-  "sentence-transformers/all-MiniLM-L6-v2";
-const EMBEDDING_VERSION = process.env.SEARCH_EMBEDDING_VERSION || "v1";
-const DIMENSIONS = Number(process.env.SEARCH_VECTOR_DIMENSIONS || 384);
-const AI_TIMEOUT_MS = Number(process.env.SEARCH_AI_TIMEOUT_MS || 3000);
+const EMBEDDING_BATCH_SIZE = 32;
 
 const clean = (values) =>
   values
@@ -30,64 +29,21 @@ const clean = (values) =>
 
 const makeText = (...values) => clean(values).join(" ").slice(0, 30000);
 
-const getEmbeddingUrl = () =>
-  `${process.env.AI_SERVICE_URL.replace(/\/$/, "")}/embeddings`;
-
-const getEmbeddingHeaders = () => ({
-  "content-type": "application/json",
-  ...(process.env.AI_SERVICE_TOKEN
-    ? { authorization: `Bearer ${process.env.AI_SERVICE_TOKEN}` }
-    : {}),
-});
-
-const requestEmbeddings = async (texts) => {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), AI_TIMEOUT_MS);
-
-  try {
-    const response = await fetch(getEmbeddingUrl(), {
-      method: "POST",
-      headers: getEmbeddingHeaders(),
-      body: JSON.stringify({ texts }),
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      throw new Error(`Embedding service returned ${response.status}.`);
-    }
-
-    const payload = await response.json();
-    const vectors = payload.embeddings;
-    const validVectors =
-      Array.isArray(vectors) &&
-      vectors.length === texts.length &&
-      vectors.every(
-        (vector) =>
-          Array.isArray(vector) &&
-          vector.length === DIMENSIONS &&
-          vector.every(Number.isFinite)
-      );
-
-    if (!validVectors) {
-      throw new Error(
-        `Embedding response must contain ${texts.length} vectors of ${DIMENSIONS} dimensions.`
-      );
-    }
-
-    return {
-      vectors,
-      model: payload.model || EMBEDDING_MODEL,
-    };
-  } finally {
-    clearTimeout(timeout);
-  }
-};
-
 const embedSafely = async (texts) => {
   if (!process.env.AI_SERVICE_URL) return null;
 
   try {
-    return await requestEmbeddings(texts);
+    const embeddings = [];
+    let model = null;
+
+    for (let start = 0; start < texts.length; start += EMBEDDING_BATCH_SIZE) {
+      const batch = texts.slice(start, start + EMBEDDING_BATCH_SIZE);
+      const result = await createEmbeddings(batch);
+      embeddings.push(...result.embeddings);
+      model = result.model;
+    }
+
+    return { embeddings, model };
   } catch (error) {
     console.error("Search embeddings are unavailable; saving text only.", error);
     return null;
@@ -285,11 +241,12 @@ const deactivateEntity = async (type, id) => {
 };
 
 const upsertDocument = async (document, embedding) => {
+  const embeddingConfig = getSearchEmbeddingConfig();
   const update = {
     ...document,
     isActive: true,
     embeddingModel: embedding?.model || null,
-    embeddingVersion: embedding ? EMBEDDING_VERSION : null,
+    embeddingVersion: embedding ? embeddingConfig.version : null,
   };
 
   if (embedding) update.embedding = embedding.vector;
@@ -317,7 +274,7 @@ export const syncEntity = async (type, id) => {
 
   if (result) {
     embedding = {
-      vector: result.vectors[0],
+      vector: result.embeddings[0],
       model: result.model,
     };
   }
@@ -411,7 +368,8 @@ export const syncBatch = async (type, records) => {
   const embeddingResult = await embedSafely(
     documents.map(({ searchableText }) => searchableText)
   );
-  const vectors = embeddingResult?.vectors;
+  const vectors = embeddingResult?.embeddings;
+  const embeddingConfig = getSearchEmbeddingConfig();
 
   const operations = documents.map((document, index) => {
     const vector = vectors?.[index];
@@ -420,7 +378,7 @@ export const syncBatch = async (type, records) => {
         ...document,
         isActive: true,
         embeddingModel: vector ? embeddingResult.model : null,
-        embeddingVersion: vector ? EMBEDDING_VERSION : null,
+        embeddingVersion: vector ? embeddingConfig.version : null,
         ...(vector ? { embedding: vector } : {}),
       },
     };
