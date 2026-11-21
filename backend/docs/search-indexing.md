@@ -53,6 +53,9 @@ For repair, first inspect the individual check status and message. Correct envir
 
 Integration review checklist:
 
+- Confirm public profiles are searchable to any authenticated user.
+- Confirm a `connections` profile is searchable only to its owner and an accepted connection, not to a pending or unrelated user.
+- Confirm private profiles are absent from search and autocomplete for other users.
 - Confirm a non-admin account receives a forbidden response from `/api/search/health`.
 - Confirm the readiness endpoint reports a missing or building Atlas index without exposing secrets.
 - Confirm a mismatched embedding model or dimension is reported and does not count as current-model coverage.
@@ -133,6 +136,10 @@ Create an Atlas Vector Search index on `searchdocuments`, named `searchdocument_
 The model output dimension, `SEARCH_VECTOR_DIMENSIONS`, and Atlas vector index dimension must match. Model changes require a new embedding version and a full reindex.
 
 After adding the role, title, salary, author, company, date, or suggestion fields, update the Atlas Search index mapping and rerun the backfill so existing documents gain those fields.
+
+## Profile visibility
+
+Public profiles can appear in search and autocomplete for any authenticated user. Profiles with `connections` visibility are returned only to the owner and users with an accepted connection. Private profiles are not indexed for search. The search and autocomplete queries pre-filter connection-visible profiles, then recheck visibility against the current profile and connection records before returning results. The profile detail endpoint uses the same visibility rule. The owner ID is stored in the existing `metadata.authorId` field so the Atlas index definitions above need no additional fields. Rerun the backfill after deploying this change to refresh existing search documents.
 
 ## Search API
 

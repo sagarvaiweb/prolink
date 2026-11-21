@@ -1,5 +1,6 @@
 import { SearchDocument } from "../../models/SearchDocument.model.js";
 import ApiError from "../../utils/ApiError.js";
+import { getProfileVisibilityContext } from "../profile/profile.visibility.service.js";
 import { hydrateCandidates } from "./search.service.js";
 
 const ENTITY_TYPES = {
@@ -15,7 +16,7 @@ const MAX_CANDIDATES = 40;
 const getSelectedTypes = (type) =>
   type === "all" ? Object.keys(ENTITY_TYPES) : type.split(",");
 
-const buildAutocompleteQuery = (query, types) => ({
+const buildAutocompleteQuery = (query, types, visibilityContext) => ({
   index: SEARCH_INDEX,
   compound: {
     must: [
@@ -35,12 +36,37 @@ const buildAutocompleteQuery = (query, types) => ({
         },
       },
     ],
-    should: types.map((type) => ({
-      equals: {
-        path: "entityType",
-        value: ENTITY_TYPES[type],
-      },
-    })),
+    should: types.map((type) => {
+      const entityFilter = {
+        equals: {
+          path: "entityType",
+          value: ENTITY_TYPES[type],
+        },
+      };
+
+      if (type !== "people") return entityFilter;
+
+      return {
+        compound: {
+          filter: [entityFilter],
+          should: [
+            {
+              equals: {
+                path: "metadata.visibility",
+                value: "public",
+              },
+            },
+            {
+              in: {
+                path: "metadata.authorId",
+                value: visibilityContext.visibleUserIds,
+              },
+            },
+          ],
+          minimumShouldMatch: 1,
+        },
+      };
+    }),
     minimumShouldMatch: 1,
   },
 });
@@ -63,8 +89,11 @@ export const autocomplete = async (requester, query) => {
   }
 
   const types = getSelectedTypes(query.type);
+  const visibilityContext = types.includes("people")
+    ? await getProfileVisibilityContext(requester._id)
+    : null;
   const candidates = await SearchDocument.aggregate([
-    { $search: buildAutocompleteQuery(query, types) },
+    { $search: buildAutocompleteQuery(query, types, visibilityContext) },
     { $limit: Math.min(query.limit * 4, MAX_CANDIDATES) },
     {
       $project: {
@@ -74,7 +103,11 @@ export const autocomplete = async (requester, query) => {
       },
     },
   ]);
-  const hydrated = await hydrateCandidates(candidates, requester);
+  const hydrated = await hydrateCandidates(
+    candidates,
+    requester,
+    visibilityContext
+  );
   const seen = new Set();
   const suggestions = [];
 

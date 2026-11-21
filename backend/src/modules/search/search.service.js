@@ -7,6 +7,10 @@ import { SearchDocument } from "../../models/SearchDocument.model.js";
 import { User } from "../../models/User.model.js";
 import ApiError from "../../utils/ApiError.js";
 import {
+  getProfileVisibilityContext,
+  isProfileVisible,
+} from "../profile/profile.visibility.service.js";
+import {
   createEmbeddings,
   getSearchEmbeddingConfig,
 } from "./search.embedding.service.js";
@@ -44,12 +48,34 @@ const RRF_CONSTANT =
     : 60;
 const MAX_CANDIDATES = 10000;
 
-const buildAtlasTypeFilter = (type, query) => {
+const buildAtlasTypeFilter = (type, query, visibilityContext) => {
   const supportedFilters = FILTERS_BY_TYPE[type];
   let dateRangeAdded = false;
   const filters = [
     { equals: { path: "entityType", value: ENTITY_TYPES[type] } },
   ];
+
+  if (type === "people") {
+    filters.push({
+      compound: {
+        should: [
+          {
+            equals: {
+              path: "metadata.visibility",
+              value: "public",
+            },
+          },
+          {
+            in: {
+              path: "metadata.authorId",
+              value: visibilityContext.visibleUserIds,
+            },
+          },
+        ],
+        minimumShouldMatch: 1,
+      },
+    });
+  }
 
   for (const filter of supportedFilters) {
     if (query[filter] === undefined) continue;
@@ -105,7 +131,7 @@ const getSearchBranches = (query) => {
     );
 };
 
-const buildKeywordSearchQuery = (query, types) => ({
+const buildKeywordSearchQuery = (query, types, visibilityContext) => ({
   index: SEARCH_INDEX,
   compound: {
     must: [
@@ -124,13 +150,24 @@ const buildKeywordSearchQuery = (query, types) => ({
         },
       },
     ],
-    should: types.map((type) => buildAtlasTypeFilter(type, query)),
+    should: types.map((type) =>
+      buildAtlasTypeFilter(type, query, visibilityContext)
+    ),
     minimumShouldMatch: 1,
   },
 });
 
-const buildVectorTypeFilter = (type, query) => {
+const buildVectorTypeFilter = (type, query, visibilityContext) => {
   const filters = [{ entityType: ENTITY_TYPES[type] }];
+
+  if (type === "people") {
+    filters.push({
+      $or: [
+        { "metadata.visibility": "public" },
+        { "metadata.authorId": { $in: visibilityContext.visibleUserIds } },
+      ],
+    });
+  }
 
   for (const filter of FILTERS_BY_TYPE[type]) {
     if (query[filter] === undefined) continue;
@@ -157,9 +194,11 @@ const buildVectorTypeFilter = (type, query) => {
   return { $and: filters };
 };
 
-const buildVectorSearchFilter = (query, types) => {
+const buildVectorSearchFilter = (query, types, visibilityContext) => {
   const embeddingConfig = getSearchEmbeddingConfig();
-  const typeFilters = types.map((type) => buildVectorTypeFilter(type, query));
+  const typeFilters = types.map((type) =>
+    buildVectorTypeFilter(type, query, visibilityContext)
+  );
   const filters = [
     { isActive: true },
     { embeddingModel: embeddingConfig.model },
@@ -177,14 +216,14 @@ const getEntityIds = (candidates, type) =>
 
 const createKey = (type, id) => `${type}:${String(id)}`;
 
-const hydratePeople = async (ids) => {
+const hydratePeople = async (ids, visibilityContext) => {
   if (!ids.length) return new Map();
 
   const [users, profiles] = await Promise.all([
     User.find({ _id: { $in: ids }, accountStatus: "active" })
       .select("firstName lastName username avatar role")
       .lean(),
-    Profile.find({ user: { $in: ids }, visibility: { $ne: "private" } })
+    Profile.find({ user: { $in: ids } })
       .select("user headline bio location skills visibility")
       .lean(),
   ]);
@@ -198,7 +237,9 @@ const hydratePeople = async (ids) => {
   for (const id of ids) {
     const user = userById.get(String(id));
     const profile = profileByUserId.get(String(id));
-    if (!user || !profile) continue;
+    if (!user || !profile || !isProfileVisible(profile, visibilityContext)) {
+      continue;
+    }
 
     const title = [user.firstName, user.lastName].filter(Boolean).join(" ");
     const description = profile.headline || profile.bio || "";
@@ -379,9 +420,13 @@ const hydrateCompanies = async (ids, requester) => {
   );
 };
 
-export const hydrateCandidates = async (candidates, requester) => {
+export const hydrateCandidates = async (
+  candidates,
+  requester,
+  visibilityContext
+) => {
   const [people, jobs, posts, companies] = await Promise.all([
-    hydratePeople(getEntityIds(candidates, "person")),
+    hydratePeople(getEntityIds(candidates, "person"), visibilityContext),
     hydrateJobs(getEntityIds(candidates, "job")),
     hydratePosts(getEntityIds(candidates, "post")),
     hydrateCompanies(getEntityIds(candidates, "company"), requester),
@@ -415,8 +460,13 @@ const getCandidateLimit = (query) => {
   );
 };
 
-const runKeywordSearch = async (query, types, candidateLimit) => {
-  const search = buildKeywordSearchQuery(query, types);
+const runKeywordSearch = async (
+  query,
+  types,
+  candidateLimit,
+  visibilityContext
+) => {
+  const search = buildKeywordSearchQuery(query, types, visibilityContext);
   const [candidates, countResult] = await Promise.all([
     SearchDocument.aggregate([
       { $search: search },
@@ -445,7 +495,13 @@ const runKeywordSearch = async (query, types, candidateLimit) => {
   };
 };
 
-const runVectorSearch = async (query, types, embedding, candidateLimit) => {
+const runVectorSearch = async (
+  query,
+  types,
+  embedding,
+  candidateLimit,
+  visibilityContext
+) => {
   const numCandidates = Math.min(
     MAX_CANDIDATES,
     Math.max(candidateLimit * 10, 100)
@@ -458,7 +514,7 @@ const runVectorSearch = async (query, types, embedding, candidateLimit) => {
         queryVector: embedding,
         numCandidates,
         limit: candidateLimit,
-        filter: buildVectorSearchFilter(query, types),
+        filter: buildVectorSearchFilter(query, types, visibilityContext),
       },
     },
     {
@@ -492,10 +548,15 @@ const createSearchResult = async (
   candidates,
   total,
   mode,
-  fallbackUsed = false
+  fallbackUsed = false,
+  visibilityContext
 ) => {
   const skip = (query.page - 1) * query.limit;
-  const hydrated = await hydrateCandidates(candidates, requester);
+  const hydrated = await hydrateCandidates(
+    candidates,
+    requester,
+    visibilityContext
+  );
 
   return {
     query: query.q,
@@ -518,6 +579,7 @@ const fallbackToKeyword = async (
   types,
   candidateLimit,
   error,
+  visibilityContext,
   keywordResult
 ) => {
   console.error(
@@ -525,7 +587,13 @@ const fallbackToKeyword = async (
     error
   );
   const keyword =
-    keywordResult || (await runKeywordSearch(query, types, candidateLimit));
+    keywordResult ||
+    (await runKeywordSearch(
+      query,
+      types,
+      candidateLimit,
+      visibilityContext
+    ));
 
   return createSearchResult(
     requester,
@@ -533,7 +601,8 @@ const fallbackToKeyword = async (
     keyword.candidates,
     keyword.total,
     "keyword",
-    true
+    true,
+    visibilityContext
   );
 };
 
@@ -544,16 +613,26 @@ export const search = async (requester, query) => {
 
   const types = getSearchBranches(query);
   if (!types.length) return createEmptyResult(query, query.mode);
+  const visibilityContext = types.includes("people")
+    ? await getProfileVisibilityContext(requester._id)
+    : null;
 
   const candidateLimit = getCandidateLimit(query);
   if (query.mode === "keyword") {
-    const keyword = await runKeywordSearch(query, types, candidateLimit);
+    const keyword = await runKeywordSearch(
+      query,
+      types,
+      candidateLimit,
+      visibilityContext
+    );
     return createSearchResult(
       requester,
       query,
       keyword.candidates,
       keyword.total,
-      "keyword"
+      "keyword",
+      false,
+      visibilityContext
     );
   }
 
@@ -567,7 +646,8 @@ export const search = async (requester, query) => {
       query,
       types,
       candidateLimit,
-      error.message
+      error.message,
+      visibilityContext
     );
   }
 
@@ -577,14 +657,17 @@ export const search = async (requester, query) => {
         query,
         types,
         embedding,
-        candidateLimit
+        candidateLimit,
+        visibilityContext
       );
       return createSearchResult(
         requester,
         query,
         candidates,
         candidates.length,
-        "semantic"
+        "semantic",
+        false,
+        visibilityContext
       );
     } catch (error) {
       return fallbackToKeyword(
@@ -592,18 +675,25 @@ export const search = async (requester, query) => {
         query,
         types,
         candidateLimit,
-        error.message
+        error.message,
+        visibilityContext
       );
     }
   }
 
-  const keyword = await runKeywordSearch(query, types, candidateLimit);
+  const keyword = await runKeywordSearch(
+    query,
+    types,
+    candidateLimit,
+    visibilityContext
+  );
   try {
     const semantic = await runVectorSearch(
       query,
       types,
       embedding,
-      candidateLimit
+      candidateLimit,
+      visibilityContext
     );
     const rankedCandidates = reciprocalRankFusion(
       [keyword.candidates, semantic],
@@ -615,7 +705,9 @@ export const search = async (requester, query) => {
       query,
       rankedCandidates,
       rankedCandidates.length,
-      "hybrid"
+      "hybrid",
+      false,
+      visibilityContext
     );
   } catch (error) {
     return fallbackToKeyword(
@@ -624,6 +716,7 @@ export const search = async (requester, query) => {
       types,
       candidateLimit,
       error.message,
+      visibilityContext,
       keyword
     );
   }

@@ -1,4 +1,5 @@
 import { Profile } from "../../models/Profile.model.js";
+import { canViewProfile } from "./profile.visibility.service.js";
 import { User } from "../../models/User.model.js";
 import { ProfileView } from "../../models/ProfileView.model.js";
 import ApiError from "../../utils/ApiError.js";
@@ -43,14 +44,11 @@ export const getProfileByUserId = async (targetUserId, requesterId) => {
   }
 
   const isOwner = String(profile.user._id) === String(requesterId);
+  if (!isOwner && !(await canViewProfile(profile, requesterId))) {
+    throw new ApiError(403, "You do not have permission to view this profile.");
+  }
 
   if (!isOwner) {
-    if (profile.visibility === "private") {
-      throw new ApiError(403, "This profile is private.");
-    }
-    // "connections" visibility would check a Connections model here (future module)
-    // For now, treat "connections" the same as public until that module exists
-
     // Record each authenticated non-owner profile visit. Store viewer IDs only
     // in the internal event log; dashboard APIs should return aggregates only.
     await Promise.all([

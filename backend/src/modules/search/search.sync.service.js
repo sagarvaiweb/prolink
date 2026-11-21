@@ -110,6 +110,7 @@ const buildPersonDocument = async (userId) => {
       location: profile.location || null,
       skills,
       visibility: profile.visibility || "public",
+      authorId: userId,
     },
   };
 };
