@@ -12,3 +12,15 @@ export const rateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
+
+export const autocompleteRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  message: {
+    success: false,
+    message: "Too many autocomplete requests. Please try again shortly.",
+    errors: [],
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});

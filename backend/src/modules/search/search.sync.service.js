@@ -28,6 +28,7 @@ const clean = (values) =>
     .map((value) => String(value).trim());
 
 const makeText = (...values) => clean(values).join(" ").slice(0, 30000);
+const makeSuggestions = (...values) => clean(values);
 
 const embedSafely = async (texts) => {
   if (!process.env.AI_SERVICE_URL) return null;
@@ -78,6 +79,7 @@ const buildPersonDocument = async (userId) => {
     item.school,
   ]);
   const skills = profile.skills || [];
+  const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ");
 
   return {
     entityId: userId,
@@ -101,6 +103,7 @@ const buildPersonDocument = async (userId) => {
       "Location:",
       profile.location
     ),
+    suggestionText: makeSuggestions(fullName, user.username, profile.headline),
     metadata: {
       role: user.role || null,
       title: profile.headline || null,
@@ -161,6 +164,7 @@ const buildJobDocument = async (jobId) => {
       "Company:",
       company?.name
     ),
+    suggestionText: makeSuggestions(job.title),
     metadata: {
       location: job.location || null,
       skills: requiredSkills,
@@ -191,6 +195,7 @@ const buildPostDocument = async (postId) => {
     entityId: postId,
     entityType: "post",
     searchableText: makeText("Post Content:", post.content),
+    suggestionText: [],
     metadata: {
       visibility: post.visibility,
       authorId: post.author,
@@ -217,6 +222,7 @@ const buildCompanyDocument = async (companyId) => {
       "Location:",
       company.location
     ),
+    suggestionText: makeSuggestions(company.name),
     metadata: {
       location: company.location || null,
       industry: company.industry || null,

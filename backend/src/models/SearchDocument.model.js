@@ -16,6 +16,10 @@ const searchDocumentSchema = new Schema(
       required: true,
       maxlength: 30000,
     },
+    suggestionText: {
+      type: [String],
+      default: [],
+    },
     embedding: {
       type: [Number],
       default: undefined,

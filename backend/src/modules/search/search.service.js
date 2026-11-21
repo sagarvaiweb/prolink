@@ -379,7 +379,7 @@ const hydrateCompanies = async (ids, requester) => {
   );
 };
 
-const hydrateCandidates = async (candidates, requester) => {
+export const hydrateCandidates = async (candidates, requester) => {
   const [people, jobs, posts, companies] = await Promise.all([
     hydratePeople(getEntityIds(candidates, "person")),
     hydrateJobs(getEntityIds(candidates, "job")),

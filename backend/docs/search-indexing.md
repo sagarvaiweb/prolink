@@ -47,6 +47,14 @@ Create an Atlas Search index on `searchdocuments`, named `searchdocument_text_in
     "dynamic": false,
     "fields": {
       "searchableText": { "type": "string", "analyzer": "lucene.standard" },
+      "suggestionText": {
+        "type": "autocomplete",
+        "analyzer": "lucene.standard",
+        "tokenization": "edgeGram",
+        "minGrams": 2,
+        "maxGrams": 15,
+        "foldDiacritics": true
+      },
       "entityType": { "type": "token", "normalizer": "lowercase" },
       "isActive": { "type": "boolean" },
       "metadata": {
@@ -102,8 +110,10 @@ Create an Atlas Vector Search index on `searchdocuments`, named `searchdocument_
 
 The model output dimension, `SEARCH_VECTOR_DIMENSIONS`, and Atlas vector index dimension must match. Model changes require a new embedding version and a full reindex.
 
-After adding the role, title, salary, author, company, or date metadata fields, update the Atlas Search index mapping and rerun the backfill so existing documents gain those fields.
+After adding the role, title, salary, author, company, date, or suggestion fields, update the Atlas Search index mapping and rerun the backfill so existing documents gain those fields.
 
 ## Search API
 
 `GET /api/search` requires a bearer token. It supports `q`, comma-separated `type`, `mode=keyword|semantic|hybrid` (default `hybrid`), `page`, `limit`, and filters for location, skills, role, headline/title, job experience level, employment type, the job's exact `salaryRange` text, industry, post author, post date range, and public post visibility. Keyword mode uses Atlas Search. Semantic mode uses the request embedding and Atlas Vector Search. Hybrid mode fuses both ranked lists with reciprocal rank fusion (RRF). Every mode batch-loads source records and rechecks current visibility and status before returning safe fields. The response reports the mode actually used and sets `fallbackUsed: true` when it falls back to keyword search. For semantic and hybrid modes, `pagination.total` reflects the bounded candidate set retrieved for ranking rather than a corpus-wide exact count.
+
+`GET /api/search/autocomplete?q=react&type=jobs&limit=8` requires a bearer token and returns prefix suggestions for people, jobs, and companies. Queries need at least two characters; results are limited to 10 and deduplicated by entity. Suggestions use Atlas Search autocomplete only and never request embeddings. The endpoint allows 30 requests per minute per IP. MongoDB supports arrays of strings for the `autocomplete` field type; see the [autocomplete mapping](https://www.mongodb.com/docs/search/indexes/field-types/autocomplete-type/) and [autocomplete operator](https://www.mongodb.com/docs/search/query/operators-collectors/autocomplete/).
