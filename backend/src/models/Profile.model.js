@@ -1,4 +1,5 @@
 import mongoose, { Schema } from "mongoose";
+import { searchSyncPlugin } from "./plugins/searchSync.plugin.js";
 
 const experienceSchema = new Schema({
   title: { type: String, required: true },
@@ -59,5 +60,7 @@ const profileSchema = new Schema(
   },
   { timestamps: true }
 );
+
+profileSchema.plugin(searchSyncPlugin);
 
 export const Profile =  mongoose.model("Profile", profileSchema);

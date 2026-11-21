@@ -1,4 +1,5 @@
 import { Schema, model } from "mongoose";
+import { searchSyncPlugin } from "./plugins/searchSync.plugin.js";
 
 const postSchema = new Schema(
   {
@@ -74,5 +75,6 @@ const postSchema = new Schema(
 
 postSchema.index({ author: 1, createdAt: -1, _id: -1 });
 postSchema.index({ visibility: 1, createdAt: -1, _id: -1 });
+postSchema.plugin(searchSyncPlugin);
 
 export const Post = model("Post", postSchema);

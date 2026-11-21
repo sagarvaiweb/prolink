@@ -1,4 +1,5 @@
 import { Schema, model } from "mongoose";
+import { searchSyncPlugin } from "./plugins/searchSync.plugin.js";
 
 const jobSchema = new Schema(
   {
@@ -65,5 +66,6 @@ jobSchema.index({ postedByCompany: 1, status: 1, createdAt: -1 });
 jobSchema.index({ postedByUser: 1, createdAt: -1 });
 jobSchema.index({ requiredSkills: 1, status: 1 });
 jobSchema.index({ jobType: 1, experienceLevel: 1, status: 1 });
+jobSchema.plugin(searchSyncPlugin);
 
 export const Job = model("Job", jobSchema);

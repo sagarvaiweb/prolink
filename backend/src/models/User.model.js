@@ -1,4 +1,5 @@
 import mongoose, { Schema } from "mongoose";
+import { searchSyncPlugin } from "./plugins/searchSync.plugin.js";
 
 const userSchema = new Schema(
   {
@@ -80,5 +81,7 @@ const userSchema = new Schema(
   },
   { timestamps: true } // adds createdAt, updatedAt automatically
 );
+
+userSchema.plugin(searchSyncPlugin);
 
 export const User = mongoose.model("User", userSchema);
