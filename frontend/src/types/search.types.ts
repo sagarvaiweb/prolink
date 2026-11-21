@@ -35,6 +35,18 @@ export interface SearchRequest extends SearchFilters {
   limit: number;
 }
 
+export interface SearchSuggestion {
+  entityType: "person" | "job" | "company";
+  entityId: string;
+  title: string;
+  subtitle: string;
+}
+
+export interface SearchAutocompleteResponse {
+  query: string;
+  suggestions: SearchSuggestion[];
+}
+
 export interface SearchPagination {
   page: number;
   limit: number;

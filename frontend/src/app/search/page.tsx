@@ -1,7 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
-import type { FormEvent } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
@@ -13,6 +12,7 @@ import {
 } from "lucide-react";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import SearchEmptyState from "@/components/search/SearchEmptyState";
+import SearchAutocomplete from "@/components/search/SearchAutocomplete";
 import SearchFilters from "@/components/search/SearchFilters";
 import SearchLoading from "@/components/search/SearchLoading";
 import SearchResults from "@/components/search/SearchResults";
@@ -185,48 +185,6 @@ function parseSearchState(params: URLSearchParams): SearchState {
   };
 }
 
-function SearchForm({
-  initialQuery,
-  onSearch,
-}: {
-  initialQuery: string;
-  onSearch: (query: string) => void;
-}) {
-  const [searchInput, setSearchInput] = useState(initialQuery);
-
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const query = searchInput.trim().replace(/\s+/g, " ").slice(0, 100);
-    if (query) onSearch(query);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-3 sm:flex-row">
-      <label className="relative min-w-0 flex-1">
-        <span className="sr-only">Search ProLink</span>
-        <Search
-          size={18}
-          className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-        />
-        <input
-          type="search"
-          value={searchInput}
-          onChange={(event) => setSearchInput(event.target.value)}
-          maxLength={100}
-          placeholder="Try ‘React developer’ or ‘product design’"
-          className="h-13 w-full rounded-xl border border-white/20 bg-white px-11 pr-4 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-amber-300 focus:ring-4 focus:ring-amber-200/20"
-        />
-      </label>
-      <button
-        type="submit"
-        className="h-13 rounded-xl bg-amber-300 px-6 text-sm font-bold text-slate-950 shadow-sm transition hover:bg-amber-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-200"
-      >
-        Search
-      </button>
-    </form>
-  );
-}
-
 function SearchPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -362,9 +320,10 @@ function SearchPageContent() {
                 Search people, open roles, conversations, and companies from one place.
               </p>
 
-              <SearchForm
-                key={new URLSearchParams(paramsKey).get("q") || ""}
+              <SearchAutocomplete
+                key={`${query}:${activeType}`}
                 initialQuery={query}
+                category={activeType}
                 onSearch={handleSearch}
               />
             </div>

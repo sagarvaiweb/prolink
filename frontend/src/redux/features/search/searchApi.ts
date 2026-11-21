@@ -1,6 +1,11 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { baseQueryWithReauth } from "@/redux/baseQuery";
-import type { SearchRequest, SearchResponse } from "@/types/search.types";
+import type {
+  SearchCategory,
+  SearchAutocompleteResponse,
+  SearchRequest,
+  SearchResponse,
+} from "@/types/search.types";
 
 export const searchApi = createApi({
   reducerPath: "searchApi",
@@ -12,7 +17,16 @@ export const searchApi = createApi({
         params,
       }),
     }),
+    autocomplete: builder.query<
+      { data: SearchAutocompleteResponse },
+      { q: string; type: SearchCategory }
+    >({
+      query: ({ q, type }) => ({
+        url: "/search/autocomplete",
+        params: { q, type, limit: 6 },
+      }),
+    }),
   }),
 });
 
-export const { useSearchQuery } = searchApi;
+export const { useAutocompleteQuery, useSearchQuery } = searchApi;
