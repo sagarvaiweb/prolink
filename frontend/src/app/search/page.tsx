@@ -186,11 +186,34 @@ function parseSearchState(params: URLSearchParams): SearchState {
   };
 }
 
+function getSafeReturnPath(value: string | null) {
+  if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) {
+    return "/dashboard";
+  }
+
+  const path = value.split(/[?#]/, 1)[0];
+  if (path === "/search" || path.startsWith("/search/")) return "/dashboard";
+
+  return path;
+}
+
+function getReturnLabel(path: string) {
+  if (path === "/dashboard") return "Back to dashboard";
+  if (path === "/feed") return "Back to feed";
+  if (path === "/jobs") return "Back to jobs";
+  if (path === "/network") return "Back to network";
+  if (path === "/profile") return "Back to profile";
+  if (path === "/companies") return "Back to companies";
+  return "Back";
+}
+
 function SearchPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
   const paramsKey = searchParams.toString();
+  const returnPath = getSafeReturnPath(searchParams.get("from"));
+  const returnLabel = getReturnLabel(returnPath);
   const urlState = useMemo(
     () => parseSearchState(new URLSearchParams(paramsKey)),
     [paramsKey]
@@ -218,6 +241,7 @@ function SearchPageContent() {
 
   const updateUrl = (next: SearchState) => {
     const params = new URLSearchParams();
+    params.set("from", returnPath);
     if (next.query) params.set("q", next.query);
     params.set("type", next.activeType);
     params.set("mode", next.searchMode);
@@ -316,17 +340,16 @@ function SearchPageContent() {
       <main className="min-h-screen bg-slate-50 px-4 py-7 sm:px-6 lg:py-10">
         <div className="mx-auto max-w-6xl">
           <Link
-            href="/feed"
+            href={returnPath}
             className="mb-6 inline-flex items-center gap-2 text-sm font-medium text-slate-500 transition hover:text-primary-800"
           >
-            <ArrowLeft size={16} /> Back to feed
+            <ArrowLeft size={16} /> {returnLabel}
           </Link>
 
-          <section className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-primary-950 to-primary-800 px-6 py-8 text-white shadow-lg shadow-primary-950/10 sm:px-9 sm:py-10">
-            <div
-              aria-hidden="true"
-              className="absolute -right-12 -top-20 h-64 w-64 rounded-full border border-white/10"
-            />
+          <section className="relative z-20 rounded-3xl bg-gradient-to-br from-slate-950 via-primary-950 to-primary-800 px-6 py-8 text-white shadow-lg shadow-primary-950/10 sm:px-9 sm:py-10">
+            <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden rounded-3xl">
+              <div className="absolute -right-12 -top-20 h-64 w-64 rounded-full border border-white/10" />
+            </div>
             <div className="relative max-w-3xl">
               <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-amber-200">
                 <Sparkles size={15} /> ProLink discovery

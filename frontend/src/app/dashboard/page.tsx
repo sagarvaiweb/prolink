@@ -11,6 +11,7 @@ import {
   MessageSquareText,
   PenLine,
   RefreshCw,
+  Search,
   ShieldCheck,
   Sparkles,
   UsersRound,
@@ -35,7 +36,13 @@ const ranges: Array<{ value: DashboardRange; label: string }> = [
   { value: "all", label: "All time" },
 ];
 
-const quickLinks = [
+const quickLinks: Array<{
+  href: string;
+  title: string;
+  description: string;
+  icon: typeof Search;
+  tone: string;
+}> = [
   {
     href: "/profile",
     title: "Polish your profile",
@@ -192,6 +199,9 @@ export default function DashboardPage() {
                       See how your presence is growing, what is resonating, and where to focus next.
                     </p>
                     <div className="mt-6 flex flex-wrap gap-3">
+                      <Link href="/search?from=%2Fdashboard" className="inline-flex items-center gap-2 rounded-xl bg-amber-300 px-4 py-2.5 text-sm font-bold text-slate-950 shadow-lg shadow-amber-950/15 transition hover:-translate-y-0.5 hover:bg-amber-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-200 lg:hidden">
+                        <Search size={16} /> Search ProLink <ArrowUpRight size={15} />
+                      </Link>
                       <Link href="/profile" className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-[#17224a] transition hover:bg-indigo-50">
                         View my profile <ArrowUpRight size={16} />
                       </Link>

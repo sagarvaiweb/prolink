@@ -14,6 +14,7 @@ import {
   LoaderCircle,
   LogOut,
   Network,
+  Search,
   UserRound,
   Trash2,
 } from "lucide-react";
@@ -252,12 +253,13 @@ export default function NotificationCenter() {
     ? user.role.charAt(0).toUpperCase() + user.role.slice(1)
     : "Member";
   const isFeedActive = pathname === "/feed";
+  const isSearchActive = pathname.startsWith("/search");
   const isNetworkActive = pathname.startsWith("/network");
   const isJobsActive = pathname.startsWith("/jobs");
   const isExploreActive = isNetworkActive || isJobsActive;
 
-  const navigationLinkClass = (isActive: boolean) =>
-    `flex h-9 w-9 items-center justify-center gap-2 rounded-xl px-0 text-xs font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 sm:w-auto sm:px-3 sm:text-sm ${
+  const navigationLinkClass = (isActive: boolean, desktopOnly = false) =>
+    `${desktopOnly ? "hidden lg:flex" : "flex"} h-9 w-9 items-center justify-center gap-2 rounded-xl px-0 text-xs font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 sm:w-auto sm:px-3 sm:text-sm ${
       isActive
         ? "bg-white text-primary-800 shadow-sm ring-1 ring-slate-200/70"
         : "text-slate-600 hover:bg-white/70 hover:text-slate-950"
@@ -275,6 +277,13 @@ export default function NotificationCenter() {
           <Link href="/feed" aria-label="Feed" aria-current={isFeedActive ? "page" : undefined} onClick={() => setIsExploreOpen(false)} className={navigationLinkClass(isFeedActive)}>
             <Home size={17} />
             <span className="hidden sm:inline">Feed</span>
+          </Link>
+          <Link href={isSearchActive ? "/search" : `/search?from=${encodeURIComponent(pathname)}`} aria-current={isSearchActive ? "page" : undefined} onClick={(event) => {
+            setIsExploreOpen(false);
+            if (isSearchActive) event.preventDefault();
+          }} className={navigationLinkClass(isSearchActive, true)}>
+            <Search size={17} />
+            <span className="hidden sm:inline">Search</span>
           </Link>
           <div className="relative" ref={exploreRef}>
             <button

@@ -180,7 +180,7 @@ export default function FeedPage() {
               </div>
               <div className="relative flex shrink-0 items-center gap-2" ref={feedToolsRef}>
                 <Link
-                  href="/search"
+                  href="/search?from=%2Ffeed"
                   className="inline-flex h-10 items-center gap-2 rounded-xl border border-white/15 bg-white/[0.08] px-3 text-sm font-semibold text-white shadow-sm backdrop-blur transition hover:border-white/25 hover:bg-white/[0.14] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-200 sm:px-3.5"
                 >
                   <Search size={17} />
