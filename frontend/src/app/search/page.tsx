@@ -13,11 +13,13 @@ import {
 } from "lucide-react";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import SearchEmptyState from "@/components/search/SearchEmptyState";
+import SearchFilters from "@/components/search/SearchFilters";
 import SearchLoading from "@/components/search/SearchLoading";
 import SearchResults from "@/components/search/SearchResults";
 import { useSearchQuery } from "@/redux/features/search/searchApi";
 import {
   setActiveType,
+  setFilters,
   setQuery,
   setSearchMode,
   setSearchPage,
@@ -26,6 +28,7 @@ import {
 import { useAppDispatch } from "@/redux/hooks";
 import type {
   SearchCategory,
+  SearchFilters as SearchFilterValues,
   SearchMode,
   SearchState,
 } from "@/types/search.types";
@@ -54,6 +57,116 @@ const categoriesSet = new Set<SearchCategory>([
   "companies",
 ]);
 const modesSet = new Set<SearchMode>(["keyword", "semantic", "hybrid"]);
+const filterFieldsByCategory: Record<
+  SearchCategory,
+  (keyof SearchFilterValues)[]
+> = {
+  all: ["location", "skills", "industry"],
+  people: ["location", "skills", "role", "title"],
+  jobs: [
+    "location",
+    "skills",
+    "experienceLevel",
+    "employmentType",
+    "salaryRange",
+    "industry",
+  ],
+  posts: ["author", "dateFrom", "dateTo"],
+  companies: ["location", "industry"],
+};
+
+const roles = ["student", "professional", "recruiter", "admin"];
+const experienceLevels = ["entry", "mid", "senior"];
+const employmentTypes = ["full-time", "part-time", "internship", "contract"];
+
+function readSearchFilters(
+  params: URLSearchParams,
+  category: SearchCategory
+): SearchFilterValues {
+  const filters: SearchFilterValues = {};
+  const readText = (
+    key: "location" | "skills" | "title" | "salaryRange" | "industry",
+    maxLength: number
+  ) => {
+    const value = params.get(key)?.trim();
+    if (value && value.length <= maxLength) filters[key] = value;
+  };
+
+  for (const key of filterFieldsByCategory[category]) {
+    if (key === "location") readText(key, 150);
+    if (key === "skills") readText(key, 1000);
+    if (key === "title") readText(key, 120);
+    if (key === "salaryRange") readText(key, 100);
+    if (key === "industry") readText(key, 100);
+    if (key === "role") {
+      const value = params.get(key);
+      if (value && roles.includes(value)) filters.role = value;
+    }
+    if (key === "experienceLevel") {
+      const value = params.get(key);
+      if (value && experienceLevels.includes(value)) {
+        filters.experienceLevel = value;
+      }
+    }
+    if (key === "employmentType") {
+      const value = params.get(key);
+      if (value && employmentTypes.includes(value)) {
+        filters.employmentType = value;
+      }
+    }
+    if (key === "author") {
+      const value = params.get(key);
+      if (value && /^[a-f\d]{24}$/i.test(value)) filters.author = value;
+    }
+    if (key === "dateFrom" || key === "dateTo") {
+      const value = params.get(key);
+      if (value && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        const date = new Date(`${value}T00:00:00.000Z`);
+        if (
+          !Number.isNaN(date.getTime()) &&
+          date.toISOString().slice(0, 10) === value
+        ) {
+          filters[key] = value;
+        }
+      }
+    }
+  }
+
+  if (filters.skills) {
+    const skills = filters.skills
+      .split(",")
+      .map((skill) => skill.trim())
+      .filter(Boolean);
+    if (skills.length > 20 || skills.some((skill) => skill.length > 50)) {
+      delete filters.skills;
+    } else {
+      filters.skills = [...new Set(skills.map((skill) => skill.toLowerCase()))].join(",");
+    }
+  }
+
+  if (
+    filters.dateFrom &&
+    filters.dateTo &&
+    new Date(filters.dateFrom).getTime() > new Date(filters.dateTo).getTime()
+  ) {
+    delete filters.dateFrom;
+    delete filters.dateTo;
+  }
+
+  return filters;
+}
+
+function filterValuesForCategory(
+  filters: SearchFilterValues,
+  category: SearchCategory
+): SearchFilterValues {
+  return Object.fromEntries(
+    Object.entries(filters).filter(([key, value]) =>
+      filterFieldsByCategory[category].includes(key as keyof SearchFilterValues) &&
+      Boolean(value)
+    )
+  ) as SearchFilterValues;
+}
 
 function parseSearchState(params: URLSearchParams): SearchState {
   const type = params.get("type") as SearchCategory | null;
@@ -64,7 +177,10 @@ function parseSearchState(params: URLSearchParams): SearchState {
     query: (params.get("q") || "").trim().slice(0, 100),
     activeType: type && categoriesSet.has(type) ? type : "all",
     searchMode: mode && modesSet.has(mode) ? mode : "hybrid",
-    activeFilters: {},
+    activeFilters: readSearchFilters(
+      params,
+      type && categoriesSet.has(type) ? type : "all"
+    ),
     page: Number.isInteger(page) && page > 0 ? Math.min(page, 100) : 1,
   };
 }
@@ -120,7 +236,7 @@ function SearchPageContent() {
     () => parseSearchState(new URLSearchParams(paramsKey)),
     [paramsKey]
   );
-  const { query, activeType, searchMode, page } = urlState;
+  const { query, activeType, searchMode, activeFilters, page } = urlState;
   const hasSubmitted = Boolean(query);
 
   useEffect(() => {
@@ -132,10 +248,11 @@ function SearchPageContent() {
       q: query,
       type: activeType,
       mode: searchMode,
+      ...activeFilters,
       page,
       limit: PAGE_SIZE,
     }),
-    [query, activeType, searchMode, page]
+    [query, activeType, searchMode, activeFilters, page]
   );
   const searchQuery = useSearchQuery(searchRequest, { skip: !query });
   const result = searchQuery.currentData?.data;
@@ -146,6 +263,9 @@ function SearchPageContent() {
     params.set("type", next.activeType);
     params.set("mode", next.searchMode);
     params.set("page", String(next.page));
+    for (const [key, value] of Object.entries(next.activeFilters)) {
+      if (value) params.set(key, value);
+    }
     router.replace(`/search?${params.toString()}`, { scroll: false });
   };
 
@@ -164,11 +284,13 @@ function SearchPageContent() {
 
   const updateCategory = (type: SearchCategory) => {
     dispatch(setActiveType(type));
+    const nextFilters = filterValuesForCategory(activeFilters, type);
+    dispatch(setFilters(nextFilters));
     const next = {
       query,
       activeType: type,
       searchMode,
-      activeFilters: {},
+      activeFilters: nextFilters,
       page: 1,
     } satisfies SearchState;
     updateUrl(next);
@@ -180,7 +302,7 @@ function SearchPageContent() {
       query,
       activeType,
       searchMode: mode,
-      activeFilters: {},
+      activeFilters,
       page: 1,
     } satisfies SearchState;
     updateUrl(next);
@@ -192,8 +314,20 @@ function SearchPageContent() {
       query,
       activeType,
       searchMode,
-      activeFilters: {},
+      activeFilters,
       page: nextPage,
+    });
+  };
+
+  const updateFilters = (nextFilters: SearchFilterValues) => {
+    dispatch(setFilters(nextFilters));
+    dispatch(setSearchPage(1));
+    updateUrl({
+      query,
+      activeType,
+      searchMode,
+      activeFilters: nextFilters,
+      page: 1,
     });
   };
 
@@ -286,6 +420,16 @@ function SearchPageContent() {
                 ))}
               </div>
 
+              <div className="mt-5 grid items-start gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
+                <aside className="lg:sticky lg:top-5">
+                  <SearchFilters
+                    key={`${activeType}:${JSON.stringify(activeFilters)}`}
+                    category={activeType}
+                    filters={activeFilters}
+                    onApply={updateFilters}
+                  />
+                </aside>
+                <div className="min-w-0">
               {result?.fallbackUsed && (
                 <p
                   role="status"
@@ -368,6 +512,8 @@ function SearchPageContent() {
                   <SearchEmptyState query={query} />
                 </div>
               ) : null}
+                </div>
+              </div>
             </section>
           )}
 
