@@ -33,10 +33,12 @@ export default function SearchAutocomplete({
   initialQuery,
   category,
   onSearch,
+  onClear,
 }: {
   initialQuery: string;
   category: SearchCategory;
   onSearch: (query: string) => void;
+  onClear: () => void;
 }) {
   const [input, setInput] = useState(initialQuery);
   const [debouncedInput, setDebouncedInput] = useState("");
@@ -153,8 +155,10 @@ export default function SearchAutocomplete({
               aria-label="Clear search query"
               onClick={() => {
                 setInput("");
+                setDebouncedInput("");
                 setActiveIndex(-1);
                 setIsOpen(false);
+                onClear();
               }}
               className="grid h-8 w-8 place-items-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary-500"
             >

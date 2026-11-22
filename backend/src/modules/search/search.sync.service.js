@@ -8,6 +8,7 @@ import {
   createEmbeddings,
   getSearchEmbeddingConfig,
 } from "./search.embedding.service.js";
+import { getLocationTerms } from "./search.location.js";
 
 const MODEL_TYPES = {
   Profile: "person",
@@ -29,6 +30,8 @@ const clean = (values) =>
 
 const makeText = (...values) => clean(values).join(" ").slice(0, 30000);
 const makeSuggestions = (...values) => clean(values);
+const normalizeSkills = (values = []) =>
+  [...new Set(clean(values).map((value) => value.toLowerCase()))];
 
 const embedSafely = async (texts) => {
   if (!process.env.AI_SERVICE_URL) return null;
@@ -107,8 +110,8 @@ const buildPersonDocument = async (userId) => {
     metadata: {
       role: user.role || null,
       title: profile.headline || null,
-      location: profile.location || null,
-      skills,
+      location: getLocationTerms(profile.location),
+      skills: normalizeSkills(skills),
       visibility: profile.visibility || "public",
       authorId: userId,
     },
@@ -167,8 +170,8 @@ const buildJobDocument = async (jobId) => {
     ),
     suggestionText: makeSuggestions(job.title),
     metadata: {
-      location: job.location || null,
-      skills: requiredSkills,
+      location: getLocationTerms(job.location),
+      skills: normalizeSkills(requiredSkills),
       experienceLevel: job.experienceLevel || null,
       employmentType: job.jobType || null,
       salaryRange: job.salaryRange || null,
@@ -225,7 +228,7 @@ const buildCompanyDocument = async (companyId) => {
     ),
     suggestionText: makeSuggestions(company.name),
     metadata: {
-      location: company.location || null,
+      location: getLocationTerms(company.location),
       industry: company.industry || null,
     },
   };

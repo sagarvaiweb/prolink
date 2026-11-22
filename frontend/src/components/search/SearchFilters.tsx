@@ -205,7 +205,8 @@ export default function SearchFilters({
                 className={fieldClassName}
               />
               <span className="mt-1 block text-[11px] text-slate-400">
-                Separate skills with commas.
+                Separate skills with commas. Results must match your search
+                phrase and at least one listed skill on a profile or job.
               </span>
             </FilterField>
           )}

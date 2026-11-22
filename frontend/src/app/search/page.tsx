@@ -8,7 +8,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
-  Sparkles,
 } from "lucide-react";
 import ProtectedRoute from "@/components/layout/ProtectedRoute";
 import SearchEmptyState from "@/components/search/SearchEmptyState";
@@ -231,7 +230,7 @@ function SearchPageContent() {
     }),
     [query, activeType, searchMode, activeFilters, page]
   );
-  const searchQuery = useSearchQuery(searchRequest, { skip: !query });
+  const searchQuery = useSearchQuery(searchRequest, { skip: !hasSubmitted });
   const result = searchQuery.currentData?.data;
 
   const updateUrl = (next: SearchState) => {
@@ -257,6 +256,18 @@ function SearchPageContent() {
       page: 1,
     } satisfies SearchState;
     dispatch(setSearchPage(1));
+    updateUrl(next);
+  };
+
+  const handleClearSearch = () => {
+    const next: SearchState = {
+      query: "",
+      activeType: "all",
+      searchMode: "hybrid",
+      activeFilters: {},
+      page: 1,
+    };
+    dispatch(setSearchState(next));
     updateUrl(next);
   };
 
@@ -346,10 +357,7 @@ function SearchPageContent() {
               <div className="absolute -right-12 -top-20 h-64 w-64 rounded-full border border-white/10" />
             </div>
             <div className="relative max-w-3xl">
-              <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-amber-200">
-                <Sparkles size={15} /> ProLink discovery
-              </p>
-              <h1 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">
+              <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">
                 Find your next connection
               </h1>
               <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300 sm:text-base">
@@ -361,11 +369,12 @@ function SearchPageContent() {
                 initialQuery={query}
                 category={activeType}
                 onSearch={handleSearch}
+                onClear={handleClearSearch}
               />
             </div>
           </section>
 
-          {hasSubmitted && query && (
+          {hasSubmitted && (
             <section className="mt-7" aria-label="Search results">
               <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:px-5">
                 <div className="min-w-0">
@@ -373,7 +382,7 @@ function SearchPageContent() {
                     Search results for
                   </p>
                   <p className="mt-1 truncate text-base font-bold text-slate-900">
-                    “{query}”
+                    {`"${query}"`}
                   </p>
                 </div>
                 <SearchModeSelect value={searchMode} onChange={updateMode} />
@@ -495,7 +504,11 @@ function SearchPageContent() {
                 </div>
               ) : result && !searchQuery.isError ? (
                 <div className="mt-5">
-                  <SearchEmptyState query={query} />
+                  <SearchEmptyState
+                    query={query}
+                    skills={activeFilters.skills}
+                    category={activeType}
+                  />
                 </div>
               ) : null}
                 </div>
@@ -510,10 +523,10 @@ function SearchPageContent() {
                   <Search size={21} />
                 </span>
                 <h2 className="mt-4 text-lg font-bold text-slate-900">
-                  Start with a name, skill, or idea
+                  Start with a search
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-slate-500">
-                  Smart Match combines keyword and meaning-based search. Choose Keyword for exact terms.
+                  Search for people, jobs, posts, or companies, then refine the matching results with filters.
                 </p>
               </div>
               <RecentSearches onSelect={handleRecentSearch} />

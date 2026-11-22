@@ -43,8 +43,8 @@ const searchDocumentSchema = new Schema(
         default: null,
       },
       location: {
-        type: String,
-        default: null,
+        type: [String],
+        default: [],
       },
       skills: {
         type: [String],

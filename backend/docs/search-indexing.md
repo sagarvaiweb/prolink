@@ -1,6 +1,6 @@
 # Search document indexing
 
-`SearchDocument` is derived from `User` + `Profile`, `Job`, `Post`, and `Company`. Source writes refresh or deactivate their search document through Mongoose middleware. Search indexing errors are logged and do not fail the source write; rerun the backfill to repair missed derived records.
+`SearchDocument` is derived from `User` + `Profile`, `Job`, `Post`, and `Company`. Source writes refresh or deactivate their search document through Mongoose middleware. Search indexing errors are logged and do not fail the source write; rerun the backfill to repair missed derived records. Location metadata is stored as normalized terms, so a filter such as `Mahendranagar` can match a stored value such as `Mahendranagar, Nepal`.
 
 ## Embeddings
 
@@ -36,6 +36,8 @@ If the AI service is unavailable during source indexing, the searchable text is 
 ## Backfill / repair
 
 From `backend/`, run `node src/scripts/reindexSearchDocuments.js` to process all four types, or pass one or more of `person`, `job`, `post`, and `company`. The script creates the MongoDB indexes declared by the search document and recent search models, then uses a cursor and bounded batches to refresh source records. It is safe to rerun. A profile maps to its owning user ID. At the end of each type it reports scanned and active documents, current-model embedding coverage, and missing embeddings. Configure and start the embedding service first if vector population is wanted. Invalid batch-size settings fall back to 50; larger values are capped at 500.
+
+After deploying normalized location matching, run `node src/scripts/reindexSearchLocations.js` once from `backend/`. This bounded, rerunnable migration refreshes location terms for people, jobs, and companies without changing their embeddings. It does not create or alter Atlas indexes.
 
 ## Operations and readiness
 
@@ -135,6 +137,8 @@ Create an Atlas Vector Search index on `searchdocuments`, named `searchdocument_
 
 The model output dimension, `SEARCH_VECTOR_DIMENSIONS`, and Atlas vector index dimension must match. Model changes require a new embedding version and a full reindex.
 
+The location field remains mapped as a lowercase `token`; it accepts the normalized string array written by the location migration. The Vector Search index already filters `metadata.location` and supports arrays of strings, so its mapping does not change. Run `node src/scripts/reindexSearchLocations.js` after deploying this change to convert existing location metadata to normalized terms. No index mapping change is required.
+
 After adding the role, title, salary, author, company, date, or suggestion fields, update the Atlas Search index mapping and rerun the backfill so existing documents gain those fields.
 
 ## Profile visibility
@@ -143,7 +147,7 @@ Public profiles can appear in search and autocomplete for any authenticated user
 
 ## Search API
 
-`GET /api/search` requires a bearer token. It supports `q`, comma-separated `type`, `mode=keyword|semantic|hybrid` (default `hybrid`), `page`, `limit`, and filters for location, skills, role, headline/title, job experience level, employment type, the job's exact `salaryRange` text, industry, post author, post date range, and public post visibility. Keyword mode uses Atlas Search. Semantic mode uses the request embedding and Atlas Vector Search. Hybrid mode fuses both ranked lists with reciprocal rank fusion (RRF). Every mode batch-loads source records and rechecks current visibility and status before returning safe fields. The response reports the mode actually used and sets `fallbackUsed: true` when it falls back to keyword search. For semantic and hybrid modes, `pagination.total` reflects the bounded candidate set retrieved for ranking rather than a corpus-wide exact count.
+`GET /api/search` requires a bearer token and a non-empty `q`. It supports comma-separated `type`, `mode=keyword|semantic|hybrid` (default `hybrid`), `page`, `limit`, and filters for location, skills, role, headline/title, job experience level, employment type, the job's exact `salaryRange` text, industry, post author, post date range, and public post visibility. Filters narrow the search phrase's results before pagination. Skills apply to people profiles and job requirements; when multiple skills are provided, a result may match any one of them, while still matching the search phrase. Location matching is case-insensitive and matches normalized full values, comma-separated components, and individual words; for example, `Mahendranagar` matches `Mahendranagar, Nepal`. Keyword mode uses Atlas Search. Semantic mode uses the request embedding and Atlas Vector Search. Hybrid mode fuses both ranked lists with reciprocal rank fusion (RRF). Every mode batch-loads source records and rechecks current visibility and status before returning safe fields. The response reports the mode actually used and sets `fallbackUsed: true` when it falls back to keyword search. For semantic and hybrid modes, `pagination.total` reflects the bounded candidate set retrieved for ranking rather than a corpus-wide exact count.
 
 `GET /api/search/autocomplete?q=react&type=jobs&limit=8` requires a bearer token and returns prefix suggestions for people, jobs, and companies. Queries need at least two characters; results are limited to 10 and deduplicated by entity. Suggestions use Atlas Search autocomplete only and never request embeddings. The endpoint allows 30 requests per minute per IP. MongoDB supports arrays of strings for the `autocomplete` field type; see the [autocomplete mapping](https://www.mongodb.com/docs/search/indexes/field-types/autocomplete-type/) and [autocomplete operator](https://www.mongodb.com/docs/search/query/operators-collectors/autocomplete/).
 

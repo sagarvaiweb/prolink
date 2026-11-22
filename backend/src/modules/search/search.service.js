@@ -15,6 +15,10 @@ import {
   getSearchEmbeddingConfig,
 } from "./search.embedding.service.js";
 import { reciprocalRankFusion } from "./search.ranking.service.js";
+import {
+  buildAtlasLocationFilter,
+  buildVectorLocationFilter,
+} from "./search.location.js";
 
 const ENTITY_TYPES = {
   people: "person",
@@ -48,7 +52,7 @@ const RRF_CONSTANT =
     : 60;
 const MAX_CANDIDATES = 10000;
 
-const buildAtlasTypeFilter = (type, query, visibilityContext) => {
+export const buildAtlasTypeFilter = (type, query, visibilityContext) => {
   const supportedFilters = FILTERS_BY_TYPE[type];
   let dateRangeAdded = false;
   const filters = [
@@ -87,6 +91,8 @@ const buildAtlasTypeFilter = (type, query, visibilityContext) => {
           value: query.skills,
         },
       });
+    } else if (filter === "location") {
+      filters.push(buildAtlasLocationFilter(query.location));
     } else if (filter === "dateFrom" || filter === "dateTo") {
       if (dateRangeAdded) continue;
       dateRangeAdded = true;
@@ -117,7 +123,7 @@ const buildAtlasTypeFilter = (type, query, visibilityContext) => {
   return { compound: { filter: filters } };
 };
 
-const getSearchBranches = (query) => {
+export const getSearchBranches = (query) => {
   const providedFilters = Object.values(FILTERS_BY_TYPE)
     .flat()
     .filter((filter, index, filters) =>
@@ -131,7 +137,7 @@ const getSearchBranches = (query) => {
     );
 };
 
-const buildKeywordSearchQuery = (query, types, visibilityContext) => ({
+export const buildKeywordSearchQuery = (query, types, visibilityContext) => ({
   index: SEARCH_INDEX,
   compound: {
     must: [
@@ -157,7 +163,7 @@ const buildKeywordSearchQuery = (query, types, visibilityContext) => ({
   },
 });
 
-const buildVectorTypeFilter = (type, query, visibilityContext) => {
+export const buildVectorTypeFilter = (type, query, visibilityContext) => {
   const filters = [{ entityType: ENTITY_TYPES[type] }];
 
   if (type === "people") {
@@ -174,6 +180,8 @@ const buildVectorTypeFilter = (type, query, visibilityContext) => {
 
     if (filter === "skills") {
       filters.push({ "metadata.skills": { $in: query.skills } });
+    } else if (filter === "location") {
+      filters.push(buildVectorLocationFilter(query.location));
     } else if (filter === "dateFrom" || filter === "dateTo") {
       if (filters.some((item) => item["metadata.createdAt"])) continue;
       filters.push({
